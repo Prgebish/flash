@@ -1,0 +1,199 @@
+#+TITLE: emacs-flash
+#+AUTHOR: Vadim
+#+OPTIONS: toc:2
+
+* emacs-flash
+
+=emacs-flash= lets you navigate your code with search labels, enhanced character motions, and Treesitter integration.
+
+Inspired by [[https://github.com/folke/flash.nvim][flash.nvim]] for Neovim.
+
+** Features
+
+- *Search Integration*: integrate =emacs-flash= with your regular search using ~/~ or =C-s=. Labels appear next to the matches, allowing you to quickly jump to any location. Labels are guaranteed not to exist as a continuation of the search pattern.
+- *Type as many characters as you want* before using a jump label.
+- *Enhanced =f=, =t=, =F=, =T= motions* with optional jump labels.
+- *Treesitter Integration*: all parents of the Treesitter node under your cursor are highlighted with a label for quick selection of a specific Treesitter node.
+- *Jump Mode*: a standalone jumping mode similar to search.
+- *Multi Window* jumping.
+- *Evil integration*: works seamlessly with evil-mode.
+
+** Requirements
+
+- Emacs >= *27.1*
+- Emacs >= *29.1* for Treesitter support
+- Optional: [[https://github.com/emacs-evil/evil][evil-mode]] for Vim-style keybindings
+
+** Installation
+
+*** use-package (from local path)
+
+#+begin_src emacs-lisp
+(use-package emacs-flash
+  :load-path "~/path/to/emacs-flash"
+  :commands (emacs-flash-jump emacs-flash-evil-jump
+             emacs-flash-treesitter emacs-flash-treesitter-evil)
+  :bind ("s-j" . emacs-flash-jump)
+  :custom
+  (emacs-flash-multi-window t)
+  (emacs-flash-autojump t)
+  :init
+  ;; Evil integration
+  (with-eval-after-load 'evil
+    (require 'emacs-flash-evil)
+    (evil-global-set-key 'normal (kbd "s") #'emacs-flash-evil-jump)
+    ;; Char motions (f/t/F/T)
+    (emacs-flash-char-setup-evil-keys))
+  :config
+  ;; Search integration (flash labels during / and ?)
+  (require 'emacs-flash-isearch)
+  (emacs-flash-isearch-mode 1))
+#+end_src
+
+*** straight.el
+
+#+begin_src emacs-lisp
+(straight-use-package
+ '(emacs-flash :type git :host github :repo "chestnykh/emacs-flash"))
+#+end_src
+
+** Configuration
+
+=emacs-flash= is highly configurable.
+
+*** Basic Options
+
+| Variable                        | Default                        | Description                               |
+|---------------------------------+--------------------------------+-------------------------------------------|
+| ~emacs-flash-labels~            | ~"asdfjkl;ghqwertyuiopzxcvbnm"~ | Characters for jump labels                |
+| ~emacs-flash-multi-window~      | ~t~                            | Search in all visible windows             |
+| ~emacs-flash-autojump~          | ~t~                            | Auto-jump when single match               |
+| ~emacs-flash-backdrop~          | ~t~                            | Dim non-matching text                     |
+| ~emacs-flash-case-fold~         | ~t~                            | Case-insensitive search                   |
+| ~emacs-flash-rainbow~           | ~nil~                          | Use rainbow colors for labels             |
+| ~emacs-flash-highlight-matches~ | ~t~                            | Highlight matched text                    |
+| ~emacs-flash-label-position~    | ~'after~                       | Label position: after, before, overlay, eol |
+| ~emacs-flash-jump-position~     | ~'start~                       | Cursor position after jump: start, end    |
+| ~emacs-flash-jumplist~          | ~t~                            | Save position to mark ring                |
+| ~emacs-flash-multi-char-labels~ | ~nil~                          | Use multi-char labels (aa, as, ad...)     |
+| ~emacs-flash-min-pattern-length~ | ~0~                           | Min pattern length to show labels         |
+
+*** Char Motion Options
+
+| Variable                          | Default | Description                     |
+|-----------------------------------+---------+---------------------------------|
+| ~emacs-flash-char-jump-labels~    | ~nil~   | Show labels for f/t/F/T matches |
+| ~emacs-flash-char-multi-line~     | ~nil~   | Search beyond current line      |
+| ~emacs-flash-char-reserved-labels~ | ~""~   | Chars to exclude from labels    |
+
+*** Search Integration Options
+
+| Variable                         | Default | Description                    |
+|----------------------------------+---------+--------------------------------|
+| ~emacs-flash-isearch-enabled~    | ~t~     | Show labels during search      |
+| ~emacs-flash-isearch-toggle-key~ | ~"C-;"~ | Key to toggle labels in search |
+| ~emacs-flash-isearch-trigger~    | ~nil~   | Trigger char before label jump |
+
+*** Example Configuration
+
+#+begin_src emacs-lisp
+(use-package emacs-flash
+  :custom
+  (emacs-flash-labels "asdfjkl;ghqwertyuiopzxcvbnm")
+  (emacs-flash-multi-window t)
+  (emacs-flash-autojump t)
+  (emacs-flash-backdrop nil)
+  (emacs-flash-rainbow t)
+  (emacs-flash-highlight-matches t)
+  (emacs-flash-label-position 'after)
+  (emacs-flash-char-jump-labels t)
+  (emacs-flash-nohlsearch t))
+#+end_src
+
+** Usage
+
+*** Standalone Jump
+
+#+begin_src emacs-lisp
+M-x emacs-flash-jump
+#+end_src
+
+Or with evil: press =s= (if configured).
+
+Type characters to narrow matches, then press a label to jump.
+
+*** Search Integration
+
+With =emacs-flash-isearch-mode= enabled:
+- Use ~/~ or =?= (evil) or =C-s= (isearch)
+- Labels appear on matches
+- Press label to jump directly
+- =C-;= to toggle labels on/off
+
+*** Character Motions (f/t/F/T)
+
+After =emacs-flash-char-setup-evil-keys=:
+- =f{char}= - jump to char forward
+- =t{char}= - jump to before char forward
+- =F{char}= - jump to char backward
+- =T{char}= - jump to after char backward
+- =;= - repeat motion
+- =,= - repeat motion reverse
+
+With =emacs-flash-char-jump-labels= enabled, labels appear on multiple matches.
+
+*** Treesitter
+
+#+begin_src emacs-lisp
+M-x emacs-flash-treesitter       ; select node with labels
+M-x emacs-flash-treesitter-evil  ; same with evil visual mode
+#+end_src
+
+Shows labels for nested syntax nodes at point. Press label to select entire node.
+
+** Faces
+
+| Face                        | Description            |
+|-----------------------------+------------------------|
+| ~emacs-flash-label~         | Jump label             |
+| ~emacs-flash-match~         | Search match highlight |
+| ~emacs-flash-backdrop~      | Backdrop (dimmed text) |
+| ~emacs-flash-label-red~     | Rainbow label (red)    |
+| ~emacs-flash-label-amber~   | Rainbow label (amber)  |
+| ~emacs-flash-label-lime~    | Rainbow label (lime)   |
+| ~emacs-flash-label-green~   | Rainbow label (green)  |
+| ~emacs-flash-label-teal~    | Rainbow label (teal)   |
+| ~emacs-flash-label-cyan~    | Rainbow label (cyan)   |
+| ~emacs-flash-label-blue~    | Rainbow label (blue)   |
+| ~emacs-flash-label-violet~  | Rainbow label (violet) |
+| ~emacs-flash-label-fuchsia~ | Rainbow label (fuchsia)|
+| ~emacs-flash-label-rose~    | Rainbow label (rose)   |
+
+*** Customizing Faces
+
+#+begin_src emacs-lisp
+;; Change label appearance
+(set-face-attribute 'emacs-flash-label nil
+                    :background "#ff0000"
+                    :foreground "#ffffff"
+                    :weight 'bold)
+
+;; Change match highlight
+(set-face-attribute 'emacs-flash-match nil
+                    :underline nil
+                    :background "#ffff00"
+                    :foreground "#000000")
+#+end_src
+
+** Alternatives
+
+- [[https://github.com/abo-abo/avy][avy]] - Jump to visible text using a char-based decision tree
+- [[https://github.com/winterTTr/ace-jump-mode][ace-jump-mode]] - Quick cursor movement
+
+** Credits
+
+Inspired by [[https://github.com/folke/flash.nvim][flash.nvim]] by folke.
+
+** License
+
+MIT
