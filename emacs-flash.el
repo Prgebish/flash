@@ -213,14 +213,10 @@ Returns t if jump was made, nil if cancelled."
              (char (read-char prompt))
              (char-str (char-to-string char)))
         (cond
-         ;; Escape - cancel (or clear prefix)
+         ;; Escape - cancel
          ((= char ?\e)
-          (if prefix
-              ;; Clear prefix, go back to showing all labels
-              (setf (emacs-flash-state-label-prefix state) nil)
-            ;; No prefix, actually cancel
-            (emacs-flash-return-to-start state)
-            (throw 'emacs-flash-done nil)))
+          (emacs-flash-return-to-start state)
+          (throw 'emacs-flash-done nil))
 
          ;; Enter - jump to first match
          ((= char ?\r)
