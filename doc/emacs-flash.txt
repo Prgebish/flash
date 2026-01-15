@@ -64,7 +64,6 @@ use-package (from local path) ~
       :bind ("s-j" . emacs-flash-jump)
       :custom
       (emacs-flash-multi-window t)
-      (emacs-flash-autojump t)
       :init
       ;; Evil integration
       (with-eval-after-load 'evil
@@ -107,6 +106,13 @@ Basic Options ~
     Characters to use as jump labels, ordered by priority.
     Earlier characters are assigned to closer matches.
 
+`emacs-flash-label-uppercase`                  *emacs-flash-label-uppercase*
+    Default: nil
+    When non-nil, also use uppercase versions of labels.
+    This doubles the number of available single-character labels.
+    Lowercase labels are assigned to closer matches, uppercase to farther.
+    Uppercase labels never conflict with search continuation.
+
 `emacs-flash-multi-char-labels`                *emacs-flash-multi-char-labels*
     Default: nil
     When non-nil, use multi-character labels (aa, as, ad...) when matches
@@ -118,8 +124,9 @@ Basic Options ~
     When non-nil, search in all visible windows.
 
 `emacs-flash-autojump`                                *emacs-flash-autojump*
-    Default: t
+    Default: nil
     When non-nil, automatically jump when there is only one match.
+    Disabled by default to prevent accidental text modification.
 
 `emacs-flash-backdrop`                                *emacs-flash-backdrop*
     Default: t
@@ -228,8 +235,9 @@ Example Configuration ~
     (use-package emacs-flash
       :custom
       (emacs-flash-labels "asdfjkl;ghqwertyuiopzxcvbnm")
+      (emacs-flash-label-uppercase t)  ; double available labels (a-z + A-Z)
       (emacs-flash-multi-window t)
-      (emacs-flash-autojump t)
+      (emacs-flash-autojump t)         ; optional: auto-jump on single match
       (emacs-flash-backdrop nil)
       (emacs-flash-rainbow t)
       (emacs-flash-highlight-matches t)

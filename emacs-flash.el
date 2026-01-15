@@ -46,6 +46,14 @@ Earlier characters are assigned to closer matches."
   :type 'string
   :group 'emacs-flash)
 
+(defcustom emacs-flash-label-uppercase nil
+  "When non-nil, also use uppercase versions of labels.
+This doubles the number of available single-character labels.
+Lowercase labels are assigned first, then uppercase.
+Uppercase labels never conflict with search continuation."
+  :type 'boolean
+  :group 'emacs-flash)
+
 (defcustom emacs-flash-multi-char-labels nil
   "When non-nil, use multi-character labels (aa, as, ad...) when needed.
 Multi-char labels are used when matches exceed available single-char labels.
@@ -58,8 +66,9 @@ When nil, only single-character labels are used and excess matches are unlabeled
   :type 'boolean
   :group 'emacs-flash)
 
-(defcustom emacs-flash-autojump t
-  "When non-nil, automatically jump when there is only one match."
+(defcustom emacs-flash-autojump nil
+  "When non-nil, automatically jump when there is only one match.
+Disabled by default to prevent accidental text modification."
   :type 'boolean
   :group 'emacs-flash)
 

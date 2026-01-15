@@ -36,7 +36,6 @@ Inspired by [[https://github.com/folke/flash.nvim][flash.nvim]] for Neovim.
   :bind ("s-j" . emacs-flash-jump)
   :custom
   (emacs-flash-multi-window t)
-  (emacs-flash-autojump t)
   :init
   ;; Evil integration
   (with-eval-after-load 'evil
@@ -66,8 +65,9 @@ Inspired by [[https://github.com/folke/flash.nvim][flash.nvim]] for Neovim.
 | Variable                        | Default                        | Description                               |
 |---------------------------------+--------------------------------+-------------------------------------------|
 | ~emacs-flash-labels~            | ~"asdfjkl;ghqwertyuiopzxcvbnm"~ | Characters for jump labels                |
+| ~emacs-flash-label-uppercase~   | ~nil~                          | Also use uppercase labels (A, S, D...)    |
 | ~emacs-flash-multi-window~      | ~t~                            | Search in all visible windows             |
-| ~emacs-flash-autojump~          | ~t~                            | Auto-jump when single match               |
+| ~emacs-flash-autojump~          | ~nil~                          | Auto-jump when single match               |
 | ~emacs-flash-backdrop~          | ~t~                            | Dim non-matching text                     |
 | ~emacs-flash-case-fold~         | ~t~                            | Case-insensitive search                   |
 | ~emacs-flash-rainbow~           | ~nil~                          | Use rainbow colors for labels             |
@@ -100,8 +100,9 @@ Inspired by [[https://github.com/folke/flash.nvim][flash.nvim]] for Neovim.
 (use-package emacs-flash
   :custom
   (emacs-flash-labels "asdfjkl;ghqwertyuiopzxcvbnm")
+  (emacs-flash-label-uppercase t)  ; double available labels (a-z + A-Z)
   (emacs-flash-multi-window t)
-  (emacs-flash-autojump t)
+  (emacs-flash-autojump t)          ; optional: auto-jump on single match
   (emacs-flash-backdrop nil)
   (emacs-flash-rainbow t)
   (emacs-flash-highlight-matches t)

@@ -97,8 +97,8 @@
     (set-window-buffer (selected-window) (current-buffer))
     (let ((state (emacs-flash-state-create (list (selected-window)))))
       (let ((labels (emacs-flash--available-labels state "")))
-        ;; All labels should be available
-        (should (= (length labels) (length emacs-flash-labels)))))))
+        ;; All labels should be available (base + uppercase if enabled)
+        (should (>= (length labels) (length emacs-flash-labels)))))))
 
 (ert-deftest emacs-flash-find-match-by-label-test ()
   "Test finding match by label."
@@ -149,6 +149,7 @@ With 2 label chars (a,b), we can generate 4 two-char labels (aa,ab,ba,bb)."
     (goto-char (point-min))
     (set-window-buffer (selected-window) (current-buffer))
     (let* ((emacs-flash-labels "ab")  ; 2 chars = 4 two-char labels
+           (emacs-flash-label-uppercase nil)  ; no uppercase for this test
            (emacs-flash-multi-char-labels t)  ; enabled
            (state (emacs-flash-state-create (list (selected-window)))))
       ;; Create 5 matches
@@ -178,6 +179,7 @@ With 2 label chars (a,b) and 5 matches, only 2 should get labels."
     (goto-char (point-min))
     (set-window-buffer (selected-window) (current-buffer))
     (let* ((emacs-flash-labels "ab")  ; 2 chars
+           (emacs-flash-label-uppercase nil)  ; no uppercase for this test
            (emacs-flash-multi-char-labels nil)  ; disabled
            (state (emacs-flash-state-create (list (selected-window)))))
       ;; Create 5 matches
