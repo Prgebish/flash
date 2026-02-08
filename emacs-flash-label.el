@@ -90,24 +90,29 @@ When `emacs-flash-label-uppercase' is non-nil, includes uppercase versions."
        chars))))
 
 (defun emacs-flash--label-conflicts-p (state pattern char)
-  "Check if CHAR as next input would match text in visible area.
-STATE provides the windows to search in.
-Only searches visible portions of windows, not entire buffers.
+  "Check if CHAR as next input would match text.
+STATE provides the windows to search in and search scope.
+When `emacs-flash-state-whole-buffer' is non-nil, searches entire buffers
+\(for search integration where matches can be anywhere).
+Otherwise only searches visible portions of windows.
 When `emacs-flash-label-uppercase' is enabled, uppercase CHAR never conflicts
 because user input is distinguished by case: lowercase continues search,
 uppercase selects label."
   ;; Uppercase labels don't conflict when uppercase mode is enabled
   (when (or (not emacs-flash-label-uppercase)
             (not (and (>= char ?A) (<= char ?Z))))
-    (let ((extended (concat pattern (char-to-string char))))
+    (let ((extended (concat pattern (char-to-string char)))
+          (whole-buffer (emacs-flash-state-whole-buffer state)))
       (cl-some
        (lambda (win)
          (when (window-live-p win)
            (with-current-buffer (window-buffer win)
              (save-excursion
-               (goto-char (window-start win))
+               (goto-char (if whole-buffer (point-min) (window-start win)))
                (let ((case-fold-search t))
-                 (search-forward extended (window-end win t) t))))))
+                 (search-forward extended
+                                 (unless whole-buffer (window-end win t))
+                                 t))))))
        (emacs-flash-state-windows state)))))
 
 (defun emacs-flash--sort-by-distance (state matches)

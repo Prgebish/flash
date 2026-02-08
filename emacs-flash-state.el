@@ -22,7 +22,8 @@
   (target nil)          ; current target match
   (start-window nil)    ; original window
   (start-point nil)     ; original point position
-  (label-prefix nil))   ; current label prefix for multi-char labels
+  (label-prefix nil)    ; current label prefix for multi-char labels
+  (whole-buffer nil))   ; when t, check label conflicts in whole buffer (for search integration)
 
 (cl-defstruct emacs-flash-match
   "A single search match."

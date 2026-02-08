@@ -90,11 +90,14 @@ When set (e.g. \";\"), you must type trigger + label to jump."
     (setq emacs-flash-isearch--active t)
     (setq emacs-flash-isearch--in-session t)
     (setq emacs-flash-isearch--original-buffer (current-buffer))
-    (setq emacs-flash-isearch--state
-          (emacs-flash-state-create
-           (if (bound-and-true-p emacs-flash-multi-window)
-               (window-list nil 'no-minibuf)
-             (list (selected-window)))))))
+    (let ((state (emacs-flash-state-create
+                  (if (bound-and-true-p emacs-flash-multi-window)
+                      (window-list nil 'no-minibuf)
+                    (list (selected-window))))))
+      ;; Search integration: check label conflicts in whole buffer
+      ;; because search can jump to matches anywhere, not just visible area
+      (setf (emacs-flash-state-whole-buffer state) t)
+      (setq emacs-flash-isearch--state state))))
 
 (defun emacs-flash-isearch--stop ()
   "Stop flash search mode and clean up."

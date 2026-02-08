@@ -24,6 +24,20 @@
       ;; Cleanup
       (emacs-flash-isearch--stop))))
 
+(ert-deftest emacs-flash-isearch-whole-buffer-test ()
+  "Test that search integration uses whole-buffer for label conflicts.
+During search, matches can be anywhere in buffer (not just visible),
+so label conflict detection must check entire buffer."
+  (with-temp-buffer
+    (insert "hello world")
+    (set-window-buffer (selected-window) (current-buffer))
+    (let ((emacs-flash-isearch-enabled t))
+      (emacs-flash-isearch--start)
+      ;; whole-buffer should be t for search integration
+      (should (emacs-flash-state-whole-buffer emacs-flash-isearch--state))
+      ;; Cleanup
+      (emacs-flash-isearch--stop))))
+
 (ert-deftest emacs-flash-isearch-stop-test ()
   "Test that stop cleans up properly."
   (with-temp-buffer
