@@ -19,6 +19,7 @@
 (defvar flash-nohlsearch)
 
 ;;; Forward declarations for evil
+(defvar evil-state)
 (defvar evil-ex-search-highlight-all)
 (declare-function evil-ex-nohighlight "evil-ex")
 
@@ -36,8 +37,12 @@ Clears highlighting if `flash-nohlsearch' is non-nil."
           (end-pos (flash-match-end-pos match))
           (fold (flash-match-fold match))
           (jump-pos flash-jump-position))
-      ;; Save to jumplist before jumping
-      (when flash-jumplist
+      ;; Save to jumplist before jumping.
+      ;; Skip in evil visual state: push-mark overwrites the selection
+      ;; anchor (mark), and the evil motion's :jump t handles jumplist.
+      (when (and flash-jumplist
+                 (not (and (bound-and-true-p evil-local-mode)
+                           (eq evil-state 'visual))))
         (push-mark nil t))
       ;; Switch window if needed
       (unless (eq win (selected-window))
