@@ -15,9 +15,10 @@
 
 ;;; Configuration (set by emacs-flash.el)
 
-(defvar emacs-flash-labels)  ; defined in emacs-flash.el
-(defvar emacs-flash-label-uppercase)  ; defined in emacs-flash.el
-(defvar emacs-flash-multi-char-labels)  ; defined in emacs-flash.el
+(defvar emacs-flash-labels)
+(defvar emacs-flash-label-uppercase)
+(defvar emacs-flash-multi-char-labels)
+(defvar emacs-flash-case-fold)
 
 ;;; Label Functions
 
@@ -109,7 +110,7 @@ uppercase selects label."
            (with-current-buffer (window-buffer win)
              (save-excursion
                (goto-char (if whole-buffer (point-min) (window-start win)))
-               (let ((case-fold-search t))
+               (let ((case-fold-search emacs-flash-case-fold))
                  (search-forward extended
                                  (unless whole-buffer (window-end win t))
                                  t))))))
@@ -146,13 +147,6 @@ Matches at cursor position are sorted last (for continue functionality)."
             (stringp label)
             (string-prefix-p prefix label))))
    (emacs-flash-state-matches state)))
-
-(defun emacs-flash-label-needs-more-chars-p (state)
-  "Return t if any match has a multi-char label."
-  (cl-some (lambda (match)
-             (let ((label (emacs-flash-match-label match)))
-               (and label (> (length label) 1))))
-           (emacs-flash-state-matches state)))
 
 (provide 'emacs-flash-label)
 ;;; emacs-flash-label.el ends here

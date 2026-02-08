@@ -10,12 +10,13 @@
 ;;; Code:
 
 (require 'emacs-flash-state)
+(require 'emacs-flash-label)
 
 ;;; Configuration (set by emacs-flash.el)
 
-(defvar emacs-flash-jump-position)  ; defined in emacs-flash.el
-(defvar emacs-flash-jumplist)       ; defined in emacs-flash.el
-(defvar emacs-flash-nohlsearch)     ; defined in emacs-flash.el
+(defvar emacs-flash-jump-position)
+(defvar emacs-flash-jumplist)
+(defvar emacs-flash-nohlsearch)
 
 ;;; Forward declarations for evil
 (defvar evil-ex-search-highlight-all)
@@ -34,11 +35,9 @@ Clears highlighting if `emacs-flash-nohlsearch' is non-nil."
           (pos (emacs-flash-match-pos match))
           (end-pos (emacs-flash-match-end-pos match))
           (fold (emacs-flash-match-fold match))
-          (jump-pos (if (boundp 'emacs-flash-jump-position)
-                        emacs-flash-jump-position
-                      'start)))
+          (jump-pos emacs-flash-jump-position))
       ;; Save to jumplist before jumping
-      (when (and (boundp 'emacs-flash-jumplist) emacs-flash-jumplist)
+      (when emacs-flash-jumplist
         (push-mark nil t))
       ;; Switch window if needed
       (unless (eq win (selected-window))
@@ -50,7 +49,7 @@ Clears highlighting if `emacs-flash-nohlsearch' is non-nil."
       (when fold
         (emacs-flash--unfold-at-point))
       ;; Clear search highlighting if requested
-      (when (and (boundp 'emacs-flash-nohlsearch) emacs-flash-nohlsearch)
+      (when emacs-flash-nohlsearch
         (emacs-flash--clear-search-highlight))
       t)))
 
@@ -68,14 +67,8 @@ Clears highlighting if `emacs-flash-nohlsearch' is non-nil."
 (defun emacs-flash-jump-to-label (state label-str)
   "Jump to match with label LABEL-STR in STATE.
 Returns t if jump successful, nil otherwise."
-  (when-let ((match (emacs-flash--find-match-by-label state label-str)))
+  (when-let ((match (emacs-flash-find-match-by-label state label-str)))
     (emacs-flash-jump-to-match match)))
-
-(defun emacs-flash--find-match-by-label (state label-str)
-  "Find match with label LABEL-STR in STATE."
-  (cl-find label-str (emacs-flash-state-matches state)
-           :key #'emacs-flash-match-label
-           :test #'equal))
 
 (defun emacs-flash-jump-to-first (state)
   "Jump to first match in STATE.

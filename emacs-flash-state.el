@@ -49,8 +49,14 @@ If nil, uses current window only."
    :start-point (point)))
 
 (defun emacs-flash-state-cleanup (state)
-  "Clean up STATE, remove all overlays."
-  (mapc #'delete-overlay (emacs-flash-state-overlays state)))
+  "Clean up STATE: delete overlays and release markers."
+  (mapc #'delete-overlay (emacs-flash-state-overlays state))
+  (setf (emacs-flash-state-overlays state) nil)
+  (dolist (m (emacs-flash-state-matches state))
+    (when (markerp (emacs-flash-match-pos m))
+      (set-marker (emacs-flash-match-pos m) nil))
+    (when (markerp (emacs-flash-match-end-pos m))
+      (set-marker (emacs-flash-match-end-pos m) nil))))
 
 (provide 'emacs-flash-state)
 ;;; emacs-flash-state.el ends here

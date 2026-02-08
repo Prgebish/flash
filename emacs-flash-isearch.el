@@ -230,13 +230,15 @@ Without trigger: any label char jumps (only when multiple matches)."
 (defvar emacs-flash-isearch--emulation-alist nil
   "Alist for `emulation-mode-map-alists' to override evil keymaps.")
 
+(defun emacs-flash-isearch--evil-after-change (&rest _)
+  "Trigger flash update after minibuffer change during evil search."
+  (run-with-idle-timer 0 nil #'emacs-flash-isearch--evil-update))
+
 (defun emacs-flash-isearch--evil-minibuffer-setup ()
   "Setup hooks in minibuffer for evil search."
   (when (bound-and-true-p evil-ex-original-buffer)
     (add-hook 'after-change-functions
-              (lambda (&rest _)
-                (run-with-idle-timer
-                 0 nil #'emacs-flash-isearch--evil-update))
+              #'emacs-flash-isearch--evil-after-change
               nil t)
     (add-hook 'pre-command-hook
               #'emacs-flash-isearch--evil-pre-command nil t)

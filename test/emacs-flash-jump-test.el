@@ -136,9 +136,9 @@
                    :window (selected-window)
                    :fold nil)))
       (setf (emacs-flash-state-matches state) (list match1 match2))
-      (should (eq match1 (emacs-flash--find-match-by-label state "a")))
-      (should (eq match2 (emacs-flash--find-match-by-label state "b")))
-      (should-not (emacs-flash--find-match-by-label state "c")))))
+      (should (eq match1 (emacs-flash-find-match-by-label state "a")))
+      (should (eq match2 (emacs-flash-find-match-by-label state "b")))
+      (should-not (emacs-flash-find-match-by-label state "c")))))
 
 ;;; Jump Position Tests
 

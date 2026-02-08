@@ -11,16 +11,20 @@
 
 (require 'emacs-flash-state)
 
-(defvar emacs-flash-case-fold)    ; defined in emacs-flash.el
+(defvar emacs-flash-case-fold)
 
 (defun emacs-flash-search (state)
   "Find all matches for STATE pattern in all windows.
 Updates STATE matches field with found matches."
+  ;; Release markers from old matches before creating new ones
+  (dolist (m (emacs-flash-state-matches state))
+    (when (markerp (emacs-flash-match-pos m))
+      (set-marker (emacs-flash-match-pos m) nil))
+    (when (markerp (emacs-flash-match-end-pos m))
+      (set-marker (emacs-flash-match-end-pos m) nil)))
   (let ((pattern (emacs-flash-state-pattern state))
         (windows (emacs-flash-state-windows state))
-        (case-fold-search (if (boundp 'emacs-flash-case-fold)
-                              emacs-flash-case-fold
-                            t))
+        (case-fold-search emacs-flash-case-fold)
         matches)
     (when (> (length pattern) 0)
       (dolist (win windows)

@@ -137,7 +137,6 @@ Returns t if jump was made, nil if cancelled."
               (when adjust-fn (funcall adjust-fn))
               (setq jumped t)))))
       ;; Cleanup
-      (emacs-flash-highlight-clear state)
       (emacs-flash-state-cleanup state))
     jumped))
 
@@ -171,7 +170,6 @@ ADJUST-FN is called on final position for t/T motions."
            (t
             (setq unread-command-events (list char)))))
       ;; Cleanup
-      (emacs-flash-highlight-clear state)
       (emacs-flash-state-cleanup state))))
 
 ;;; Motion Implementation
@@ -232,7 +230,8 @@ Returns t if jump was made."
 ;;;###autoload
 (defun emacs-flash-char-find (count char)
   "Jump forward to CHAR on current line.
-If COUNT is negative, search backward (for evil repeat compatibility).
+COUNT is used only for direction: negative means reverse search
+\(for evil repeat compatibility), not for repetition.
 With labels enabled, shows labels for multiple matches."
   (interactive "p\ncFind char: ")
   (let* ((cnt (or count 1))
@@ -243,7 +242,8 @@ With labels enabled, shows labels for multiple matches."
 ;;;###autoload
 (defun emacs-flash-char-find-to (count char)
   "Jump forward to before CHAR on current line.
-If COUNT is negative, search backward (for evil repeat compatibility).
+COUNT is used only for direction: negative means reverse search
+\(for evil repeat compatibility), not for repetition.
 With labels enabled, shows labels for multiple matches."
   (interactive "p\ncFind char (to): ")
   (let* ((cnt (or count 1))
@@ -254,7 +254,8 @@ With labels enabled, shows labels for multiple matches."
 ;;;###autoload
 (defun emacs-flash-char-find-backward (count char)
   "Jump backward to CHAR on current line.
-If COUNT is negative, search forward (for evil repeat compatibility).
+COUNT is used only for direction: negative means forward search
+\(for evil repeat compatibility), not for repetition.
 With labels enabled, shows labels for multiple matches."
   (interactive "p\ncFind char backward: ")
   (let* ((cnt (or count 1))
@@ -265,7 +266,8 @@ With labels enabled, shows labels for multiple matches."
 ;;;###autoload
 (defun emacs-flash-char-find-to-backward (count char)
   "Jump backward to after CHAR on current line.
-If COUNT is negative, search forward (for evil repeat compatibility).
+COUNT is used only for direction: negative means forward search
+\(for evil repeat compatibility), not for repetition.
 With labels enabled, shows labels for multiple matches."
   (interactive "p\ncFind char backward (to): ")
   (let* ((cnt (or count 1))

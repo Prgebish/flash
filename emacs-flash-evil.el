@@ -37,15 +37,6 @@ In visual mode: extends selection to target."
   (emacs-flash-jump))
 
 
-;;; Treesitter-style selection (select semantic units)
-
-(defun emacs-flash-evil-select ()
-  "Flash jump and select region from current point to target."
-  (interactive)
-  (let ((start (point)))
-    (when (emacs-flash-jump)
-      (evil-visual-make-selection start (point)))))
-
 ;;; Setup function
 
 ;;;###autoload

@@ -78,9 +78,7 @@ Returns list of (START END TYPE DEPTH) for each node."
 
 (defun emacs-flash-treesitter--nodes-to-matches (nodes)
   "Convert NODES to emacs-flash-match structures with labels."
-  (let ((labels (if (boundp 'emacs-flash-labels)
-                    emacs-flash-labels
-                  "asdfjkl;ghqwertyuiopzxcvbnm"))
+  (let ((labels emacs-flash-labels)
         (matches '())
         (idx 0))
     (dolist (node nodes)
@@ -105,7 +103,7 @@ Returns list of (START END TYPE DEPTH) for each node."
   ;; Clear existing overlays
   (emacs-flash-highlight-clear state)
   ;; Create backdrop if enabled
-  (when (and (boundp 'emacs-flash-backdrop) emacs-flash-backdrop)
+  (when emacs-flash-backdrop
     (let ((ov (make-overlay (window-start) (window-end))))
       (overlay-put ov 'face 'emacs-flash-backdrop)
       (overlay-put ov 'emacs-flash t)
@@ -142,32 +140,35 @@ Press a label to select that node's range."
     (setf (emacs-flash-state-start-point state) (point))
     (unwind-protect
         (emacs-flash-treesitter--loop state)
-      (emacs-flash-highlight-clear state)
       (emacs-flash-state-cleanup state))))
 
 (defun emacs-flash-treesitter--loop (state)
   "Input loop for treesitter STATE."
-  (emacs-flash-treesitter--highlight state)
-  (redisplay t)
-  (let ((char (read-char "Treesitter node: ")))
-    (cond
-     ;; Escape - cancel
-     ((= char ?\e)
-      nil)
-     ;; Enter - select innermost (first) node
-     ((= char ?\r)
-      (when-let ((match (car (emacs-flash-state-matches state))))
-        (emacs-flash-treesitter--select-match match)))
-     ;; Try to find matching label
-     (t
-      (let* ((char-str (char-to-string char))
-             (match (cl-find-if (lambda (m)
-                                  (equal (emacs-flash-match-label m) char-str))
-                                (emacs-flash-state-matches state))))
-        (if match
-            (emacs-flash-treesitter--select-match match)
-          (beep)
-          (emacs-flash-treesitter--loop state)))))))
+  (catch 'emacs-flash-ts-done
+    (while t
+      (emacs-flash-treesitter--highlight state)
+      (redisplay t)
+      (let ((char (read-char "Treesitter node: ")))
+        (cond
+         ;; Escape - cancel
+         ((= char ?\e)
+          (throw 'emacs-flash-ts-done nil))
+         ;; Enter - select innermost (first) node
+         ((= char ?\r)
+          (when-let ((match (car (emacs-flash-state-matches state))))
+            (emacs-flash-treesitter--select-match match))
+          (throw 'emacs-flash-ts-done t))
+         ;; Try to find matching label
+         (t
+          (let* ((char-str (char-to-string char))
+                 (match (cl-find-if (lambda (m)
+                                      (equal (emacs-flash-match-label m) char-str))
+                                    (emacs-flash-state-matches state))))
+            (if match
+                (progn
+                  (emacs-flash-treesitter--select-match match)
+                  (throw 'emacs-flash-ts-done t))
+              (beep)))))))))
 
 (defun emacs-flash-treesitter--select-match (match)
   "Select the range of MATCH."
@@ -202,42 +203,35 @@ Press a label to select that node's range."
     (setf (emacs-flash-state-start-point state) (point))
     (unwind-protect
         (emacs-flash-treesitter--evil-loop state)
-      (emacs-flash-highlight-clear state)
       (emacs-flash-state-cleanup state))))
 
 (defun emacs-flash-treesitter--evil-loop (state)
   "Input loop for treesitter STATE with evil support."
-  (emacs-flash-treesitter--highlight state)
-  (redisplay t)
-  (let ((char (read-char "Treesitter node: ")))
-    (cond
-     ;; Escape - cancel
-     ((= char ?\e)
-      nil)
-     ;; Enter - select innermost node
-     ((= char ?\r)
-      (when-let ((match (car (emacs-flash-state-matches state))))
-        (emacs-flash-treesitter--evil-select match)))
-     ;; Semicolon - next (outer) node
-     ((= char ?\;)
-      ;; TODO: implement navigation
-      (beep)
-      (emacs-flash-treesitter--evil-loop state))
-     ;; Comma - prev (inner) node
-     ((= char ?,)
-      ;; TODO: implement navigation
-      (beep)
-      (emacs-flash-treesitter--evil-loop state))
-     ;; Try to find matching label
-     (t
-      (let* ((char-str (char-to-string char))
-             (match (cl-find-if (lambda (m)
-                                  (equal (emacs-flash-match-label m) char-str))
-                                (emacs-flash-state-matches state))))
-        (if match
-            (emacs-flash-treesitter--evil-select match)
-          (beep)
-          (emacs-flash-treesitter--evil-loop state)))))))
+  (catch 'emacs-flash-ts-done
+    (while t
+      (emacs-flash-treesitter--highlight state)
+      (redisplay t)
+      (let ((char (read-char "Treesitter node: ")))
+        (cond
+         ;; Escape - cancel
+         ((= char ?\e)
+          (throw 'emacs-flash-ts-done nil))
+         ;; Enter - select innermost node
+         ((= char ?\r)
+          (when-let ((match (car (emacs-flash-state-matches state))))
+            (emacs-flash-treesitter--evil-select match))
+          (throw 'emacs-flash-ts-done t))
+         ;; Try to find matching label
+         (t
+          (let* ((char-str (char-to-string char))
+                 (match (cl-find-if (lambda (m)
+                                      (equal (emacs-flash-match-label m) char-str))
+                                    (emacs-flash-state-matches state))))
+            (if match
+                (progn
+                  (emacs-flash-treesitter--evil-select match)
+                  (throw 'emacs-flash-ts-done t))
+              (beep)))))))))
 
 (defun emacs-flash-treesitter--evil-select (match)
   "Select the range of MATCH using evil visual mode."

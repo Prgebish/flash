@@ -228,24 +228,5 @@ With 2 label chars (a,b) and 5 matches, only 2 should get labels."
         (should (= 1 (length matches)))  ; ba only
         (should (equal "ba" (emacs-flash-match-label (car matches))))))))
 
-(ert-deftest emacs-flash-label-needs-more-chars-test ()
-  "Test detection of multi-char labels."
-  (with-temp-buffer
-    (insert "test")
-    (set-window-buffer (selected-window) (current-buffer))
-    (let ((state (emacs-flash-state-create (list (selected-window)))))
-      ;; Single-char labels
-      (setf (emacs-flash-state-matches state)
-            (list (make-emacs-flash-match
-                   :pos (copy-marker 1) :end-pos (copy-marker 2)
-                   :label "a" :window (selected-window) :fold nil)))
-      (should-not (emacs-flash-label-needs-more-chars-p state))
-      ;; Multi-char labels
-      (setf (emacs-flash-state-matches state)
-            (list (make-emacs-flash-match
-                   :pos (copy-marker 1) :end-pos (copy-marker 2)
-                   :label "aa" :window (selected-window) :fold nil)))
-      (should (emacs-flash-label-needs-more-chars-p state)))))
-
 (provide 'emacs-flash-label-test)
 ;;; emacs-flash-label-test.el ends here

@@ -173,16 +173,15 @@ Handles both `evil-search' and `isearch' modules."
 Type characters to search, then press a label to jump.
 Press RET to jump to first match, ESC to cancel."
   (interactive)
-  (let ((windows (if emacs-flash-multi-window
-                     (window-list nil 'no-minibuf)
-                   (list (selected-window)))))
-    (let ((state (emacs-flash-state-create windows)))
-      (setf (emacs-flash-state-start-window state) (selected-window))
-      (setf (emacs-flash-state-start-point state) (point))
-      (unwind-protect
-          (emacs-flash--loop state)
-        (emacs-flash-highlight-clear state)
-        (emacs-flash-state-cleanup state)))))
+  (let* ((windows (if emacs-flash-multi-window
+                      (window-list nil 'no-minibuf)
+                    (list (selected-window))))
+         (state (emacs-flash-state-create windows)))
+    (setf (emacs-flash-state-start-window state) (selected-window))
+    (setf (emacs-flash-state-start-point state) (point))
+    (unwind-protect
+        (emacs-flash--loop state)
+      (emacs-flash-state-cleanup state))))
 
 ;;; Main Loop
 
@@ -305,19 +304,18 @@ Also saves pattern and adds to search history."
   "Continue flash jump with the last search pattern.
 If no previous pattern exists, starts a new search."
   (interactive)
-  (let ((windows (if emacs-flash-multi-window
-                     (window-list nil 'no-minibuf)
-                   (list (selected-window)))))
-    (let ((state (emacs-flash-state-create windows)))
-      (setf (emacs-flash-state-start-window state) (selected-window))
-      (setf (emacs-flash-state-start-point state) (point))
-      ;; Set initial pattern from last search
-      (when emacs-flash--last-pattern
-        (setf (emacs-flash-state-pattern state) emacs-flash--last-pattern))
-      (unwind-protect
-          (emacs-flash--loop state)
-        (emacs-flash-highlight-clear state)
-        (emacs-flash-state-cleanup state)))))
+  (let* ((windows (if emacs-flash-multi-window
+                      (window-list nil 'no-minibuf)
+                    (list (selected-window))))
+         (state (emacs-flash-state-create windows)))
+    (setf (emacs-flash-state-start-window state) (selected-window))
+    (setf (emacs-flash-state-start-point state) (point))
+    ;; Set initial pattern from last search
+    (when emacs-flash--last-pattern
+      (setf (emacs-flash-state-pattern state) emacs-flash--last-pattern))
+    (unwind-protect
+        (emacs-flash--loop state)
+      (emacs-flash-state-cleanup state))))
 
 ;;; Optional modules
 

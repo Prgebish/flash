@@ -105,10 +105,10 @@ Same 10 colors as flash.nvim: red, amber, lime, green, teal, cyan, blue, violet,
 
 ;;; Configuration (set by emacs-flash.el)
 
-(defvar emacs-flash-backdrop)           ; defined in emacs-flash.el
-(defvar emacs-flash-rainbow)            ; defined in emacs-flash.el
-(defvar emacs-flash-highlight-matches t)  ; defined in emacs-flash.el
-(defvar emacs-flash-label-position)     ; defined in emacs-flash.el
+(defvar emacs-flash-backdrop)
+(defvar emacs-flash-rainbow)
+(defvar emacs-flash-highlight-matches)
+(defvar emacs-flash-label-position)
 
 ;;; Highlight Functions
 
@@ -159,9 +159,7 @@ INDEX is used to select rainbow color when `emacs-flash-rainbow' is enabled."
                               (string-prefix-p prefix label))))
          (face (when show-label (emacs-flash--get-label-face index)))
          (buf (marker-buffer pos))
-         (position (if (boundp 'emacs-flash-label-position)
-                       emacs-flash-label-position
-                     'after)))
+         (position emacs-flash-label-position))
     (when buf
       (with-current-buffer buf
         (cond

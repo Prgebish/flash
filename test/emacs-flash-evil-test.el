@@ -27,11 +27,6 @@
     "Test that emacs-flash-evil-jump is marked as jump."
     (should (evil-get-command-property 'emacs-flash-evil-jump :jump)))
 
-  (ert-deftest emacs-flash-evil-select-defined-test ()
-    "Test that emacs-flash-evil-select is defined."
-    (should (fboundp 'emacs-flash-evil-select))
-    (should (commandp 'emacs-flash-evil-select)))
-
   (ert-deftest emacs-flash-evil-setup-defined-test ()
     "Test that emacs-flash-evil-setup is defined."
     (should (fboundp 'emacs-flash-evil-setup))
