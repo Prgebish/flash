@@ -8,15 +8,19 @@
 
 Inspired by [[https://github.com/folke/flash.nvim][flash.nvim]] for Neovim.
 
+** Why flash?
+
+Unlike [[https://github.com/abo-abo/avy][avy]], =flash= uses *incremental search*: you type as many characters as you want to narrow down matches, and labels appear alongside the results. Labels are assigned intelligently --- characters that would continue the search pattern are never used as labels, so there is no ambiguity between searching and jumping.
+
 ** Features
 
-- *Search Integration*: integrate =flash= with your regular search using ~/~ or =C-s=. Labels appear next to the matches, allowing you to quickly jump to any location. Labels are guaranteed not to exist as a continuation of the search pattern.
-- *Type as many characters as you want* before using a jump label.
-- *Enhanced =f=, =t=, =F=, =T= motions* with optional jump labels.
-- *Treesitter Integration*: all parents of the Treesitter node under your cursor are highlighted with a label for quick selection of a specific Treesitter node.
-- *Jump Mode*: a standalone jumping mode similar to search.
-- *Multi Window* jumping.
-- *Evil integration*: works seamlessly with evil-mode.
+- *Search Integration*: labels appear during regular =C-s= / ~/~ / =?= search. Press a label character to jump instantly.
+- *Incremental input*: type as many characters as you need before using a label. No fixed-length input.
+- *Enhanced =f=, =t=, =F=, =T= motions* with multi-match labels.
+- *Treesitter Integration*: select any parent node of the syntax tree at point with a single keystroke.
+- *Standalone Jump Mode*: start a flash search at any time without entering isearch.
+- *Multi-window* jumping across all visible windows.
+- *Evil integration*: works as a proper evil motion (composable with operators like =d=, =y=, =c=).
 
 ** Requirements
 
@@ -31,20 +35,18 @@ Inspired by [[https://github.com/folke/flash.nvim][flash.nvim]] for Neovim.
 #+begin_src emacs-lisp
 (use-package flash
   :load-path "~/path/to/flash"
-  :commands (flash-jump flash-evil-jump
-             flash-treesitter flash-treesitter-evil)
+  :commands (flash-jump flash-jump-continue
+             flash-treesitter)
   :bind ("s-j" . flash-jump)
   :custom
   (flash-multi-window t)
   :init
-  ;; Evil integration
+  ;; Evil integration (simple setup)
   (with-eval-after-load 'evil
     (require 'flash-evil)
-    (evil-global-set-key 'normal (kbd "s") #'flash-evil-jump)
-    ;; Char motions (f/t/F/T)
-    (flash-char-setup-evil-keys))
+    (flash-evil-setup t))  ; t = also set up f/t/F/T char motions
   :config
-  ;; Search integration (flash labels during / and ?)
+  ;; Search integration (labels during C-s, /, ?)
   (require 'flash-isearch)
   (flash-isearch-mode 1))
 #+end_src
@@ -56,43 +58,100 @@ Inspired by [[https://github.com/folke/flash.nvim][flash.nvim]] for Neovim.
  '(flash :type git :host github :repo "chestnykh/flash"))
 #+end_src
 
-** Configuration
+*** elpaca
 
-=flash= is highly configurable.
+#+begin_src emacs-lisp
+(elpaca (flash :host github :repo "chestnykh/flash"))
+#+end_src
+
+** Usage
+
+*** Standalone Jump
+
+=M-x flash-jump= starts an interactive search. Type characters to narrow matches, then press a label to jump.
+
+With evil-mode: press =gs= (or =s= if you bind it manually). I personally find =C-/= convenient --- it is easy to reach and does not shadow any useful evil bindings.
+
+=M-x flash-jump-continue= resumes the previous search with the same pattern. Useful when you want to jump again to another match of the same text.
+
+*** Search Integration
+
+=flash-isearch-mode= adds labels to your regular incremental search. It works with both =C-s= (Emacs isearch) and ~/~ / =?= (evil-ex-search).
+
+When enabled:
+- Start a search as usual (=C-s= or =/=).
+- As you type, labels appear next to each match.
+- Press a label character to jump directly to that match.
+- Press =C-;= to toggle labels on or off during a search.
+
+*** Character Motions (f/t/F/T)
+
+Requires evil-mode. Set up keybindings with =flash-evil-setup= (pass =t= for char motions) or =flash-char-setup-evil-keys= manually. Then enable labels:
+
+#+begin_src emacs-lisp
+(setq flash-char-jump-labels t)
+#+end_src
+
+Without ~flash-char-jump-labels~, =f= / =t= just jump to the first match (like normal evil motions). With it enabled, all matches get labels, so you can reach any match with a single keystroke instead of repeating =;=.
+
+- =f{char}= / =F{char}= --- jump to character forward / backward.
+- =t{char}= / =T{char}= --- jump to just before character forward / backward.
+- =;= --- repeat last motion.
+- =,= --- repeat last motion in reverse (if =,= is your localleader, rebind to e.g. =\=).
+
+*** Treesitter
+
+#+begin_src emacs-lisp
+M-x flash-treesitter
+#+end_src
+
+Shows labels for all parent nodes of the Treesitter syntax tree at point, from the innermost to the outermost. Each label corresponds to a progressively larger region of code (e.g., identifier, expression, statement, function body, function definition). Press a label to select that entire node. With evil-mode, the selection enters visual state automatically.
+
+This is useful for quickly selecting or operating on a surrounding code structure --- for example, selecting an entire function, an if-block, or an argument list.
+
+** Configuration
 
 *** Basic Options
 
-| Variable                        | Default                        | Description                               |
-|---------------------------------+--------------------------------+-------------------------------------------|
-| ~flash-labels~            | ~"asdfjkl;ghqwertyuiopzxcvbnm"~ | Characters for jump labels                |
-| ~flash-label-uppercase~   | ~nil~                          | Also use uppercase labels (A, S, D...)    |
-| ~flash-multi-window~      | ~t~                            | Search in all visible windows             |
-| ~flash-autojump~          | ~nil~                          | Auto-jump when single match               |
-| ~flash-backdrop~          | ~t~                            | Dim non-matching text                     |
-| ~flash-case-fold~         | ~t~                            | Case-insensitive search                   |
-| ~flash-rainbow~           | ~nil~                          | Use rainbow colors for labels             |
-| ~flash-highlight-matches~ | ~t~                            | Highlight matched text                    |
-| ~flash-label-position~    | ~'after~                       | Label position: after, before, overlay, eol |
-| ~flash-jump-position~     | ~'start~                       | Cursor position after jump: start, end    |
-| ~flash-jumplist~          | ~t~                            | Save position to mark ring                |
-| ~flash-multi-char-labels~ | ~nil~                          | Use multi-char labels (aa, as, ad...)     |
-| ~flash-min-pattern-length~ | ~0~                           | Min pattern length to show labels         |
+| Variable                   | Default                        | Description                                        |
+|----------------------------+--------------------------------+----------------------------------------------------|
+| ~flash-labels~             | ~"asdfjkl;ghqwertyuiopzxcvbnm"~ | Characters used for jump labels                   |
+| ~flash-label-uppercase~    | ~nil~                          | Also use uppercase labels, doubling the pool (A-Z) |
+| ~flash-multi-char-labels~  | ~nil~                          | Use multi-character labels (aa, as, ad...)         |
+| ~flash-multi-window~       | ~t~                            | Search across all visible windows                  |
+| ~flash-autojump~           | ~nil~                          | Jump immediately when only one match remains       |
+| ~flash-backdrop~           | ~t~                            | Dim non-matching text                              |
+| ~flash-case-fold~          | ~t~                            | Ignore case when searching                         |
+| ~flash-rainbow~            | ~nil~                          | Color labels with a rainbow palette                |
+| ~flash-highlight-matches~  | ~t~                            | Highlight matched text                             |
+| ~flash-label-position~     | ~'after~                       | Where to place labels: after, before, overlay, eol |
+| ~flash-jump-position~      | ~'start~                       | Cursor position after jump: start or end of match  |
+| ~flash-jumplist~           | ~t~                            | Push position to mark ring before jumping          |
+| ~flash-nohlsearch~         | ~nil~                          | Clear search highlighting after jump               |
+| ~flash-search-history~     | ~nil~                          | Add search pattern to isearch history              |
+| ~flash-min-pattern-length~ | ~0~                            | Minimum pattern length before labels appear        |
 
 *** Char Motion Options
 
-| Variable                          | Default | Description                     |
-|-----------------------------------+---------+---------------------------------|
-| ~flash-char-jump-labels~    | ~nil~   | Show labels for f/t/F/T matches |
-| ~flash-char-multi-line~     | ~nil~   | Search beyond current line      |
-| ~flash-char-reserved-labels~ | ~""~   | Chars to exclude from labels    |
+| Variable                     | Default | Description                                                                          |
+|------------------------------+---------+--------------------------------------------------------------------------------------|
+| ~flash-char-jump-labels~     | ~nil~   | Show labels on all f/t/F/T matches                                                   |
+| ~flash-char-multi-line~      | ~nil~   | Search beyond current line                                                           |
+| ~flash-char-reserved-labels~ | ~""~    | Characters excluded from labels (e.g., ~"aisoAISO;,cCxr"~ to keep evil editing keys) |
 
 *** Search Integration Options
 
-| Variable                         | Default | Description                    |
-|----------------------------------+---------+--------------------------------|
-| ~flash-isearch-enabled~    | ~t~     | Show labels during search      |
-| ~flash-isearch-toggle-key~ | ~"C-;"~ | Key to toggle labels in search |
-| ~flash-isearch-trigger~    | ~nil~   | Trigger char before label jump |
+| Variable                   | Default | Description                                  |
+|----------------------------+---------+----------------------------------------------|
+| ~flash-isearch-enabled~    | ~t~     | Show labels during search                    |
+| ~flash-isearch-toggle-key~ | ~"C-;"~ | Key to toggle labels on/off during search    |
+| ~flash-isearch-trigger~    | ~nil~   | Require a trigger character before label jump |
+
+*** Treesitter Options
+
+| Variable                     | Default | Description                        |
+|------------------------------+---------+------------------------------------|
+| ~flash-treesitter-max-depth~ | ~10~    | Maximum depth of parent nodes shown |
 
 *** Example Configuration
 
@@ -100,62 +159,55 @@ Inspired by [[https://github.com/folke/flash.nvim][flash.nvim]] for Neovim.
 (use-package flash
   :custom
   (flash-labels "asdfjkl;ghqwertyuiopzxcvbnm")
-  (flash-label-uppercase t)  ; double available labels (a-z + A-Z)
+  (flash-label-uppercase t)     ; double available labels (a-z + A-Z)
   (flash-multi-window t)
-  (flash-autojump t)          ; optional: auto-jump on single match
-  (flash-backdrop nil)
-  (flash-rainbow t)
+  (flash-autojump t)            ; auto-jump when single match
+  (flash-backdrop nil)          ; no dimming
+  (flash-rainbow t)             ; colorful labels
   (flash-highlight-matches t)
   (flash-label-position 'after)
-  (flash-char-jump-labels t)
-  (flash-nohlsearch t))
+  (flash-char-jump-labels t)    ; labels on f/t/F/T matches
+  (flash-nohlsearch t)          ; clear highlight after jump
+  (flash-search-history t))     ; save patterns to isearch history
 #+end_src
 
-** Usage
+** Evil Integration
 
-*** Standalone Jump
+*** Quick Setup
+
+=flash-evil-setup= configures all evil keybindings in one call:
 
 #+begin_src emacs-lisp
-M-x flash-jump
+(require 'flash-evil)
+(flash-evil-setup t)  ; t = also set up f/t/F/T char motions
 #+end_src
 
-Or with evil: press =s= (if configured).
+This binds =gs= to =flash-evil-jump= in normal, visual, motion, and operator states. With the optional argument, it also replaces =f=, =t=, =F=, =T= with flash-enhanced versions.
 
-Type characters to narrow matches, then press a label to jump.
+*** Manual Setup
 
-*** Search Integration
-
-With =flash-isearch-mode= enabled:
-- Use ~/~ or =?= (evil) or =C-s= (isearch)
-- Labels appear on matches
-- Press label to jump directly
-- =C-;= to toggle labels on/off
-
-*** Character Motions (f/t/F/T)
-
-After =flash-char-setup-evil-keys=:
-- =f{char}= - jump to char forward
-- =t{char}= - jump to before char forward
-- =F{char}= - jump to char backward
-- =T{char}= - jump to after char backward
-- =;= - repeat motion
-- =,= - repeat motion reverse
-
-With =flash-char-jump-labels= enabled, labels appear on multiple matches.
-
-*** Treesitter
+If you prefer different keybindings:
 
 #+begin_src emacs-lisp
-M-x flash-treesitter       ; select node with labels
-M-x flash-treesitter-evil  ; same with evil visual mode
+(require 'flash-evil)
+(evil-global-set-key 'normal (kbd "s") #'flash-evil-jump)
+(evil-global-set-key 'visual (kbd "s") #'flash-evil-jump)
+;; Char motions
+(flash-char-setup-evil-keys)
 #+end_src
 
-Shows labels for nested syntax nodes at point. Press label to select entire node.
+*** Operator Support
+
+=flash-evil-jump= is a proper evil motion, so it composes with operators:
+
+- =d gs {label}= --- delete to target
+- =y gs {label}= --- yank to target
+- =v gs {label}= --- extend visual selection to target
 
 ** Faces
 
-| Face                        | Description            |
-|-----------------------------+------------------------|
+| Face                  | Description            |
+|-----------------------+------------------------|
 | ~flash-label~         | Jump label             |
 | ~flash-match~         | Search match highlight |
 | ~flash-backdrop~      | Backdrop (dimmed text) |
@@ -188,8 +240,8 @@ Shows labels for nested syntax nodes at point. Press label to select entire node
 
 ** Alternatives
 
-- [[https://github.com/abo-abo/avy][avy]] - Jump to visible text using a char-based decision tree
-- [[https://github.com/winterTTr/ace-jump-mode][ace-jump-mode]] - Quick cursor movement
+- [[https://github.com/abo-abo/avy][avy]] --- jump to visible text using a char-based decision tree. Unlike flash, avy uses fixed-length input: you choose a target type (word, line, character), then press label keys. Flash lets you type an arbitrary search pattern first.
+- [[https://github.com/winterTTr/ace-jump-mode][ace-jump-mode]] --- quick cursor movement (predecessor to avy).
 
 ** Credits
 

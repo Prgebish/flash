@@ -25,6 +25,7 @@ Updates STATE matches field with found matches."
   (let ((pattern (flash-state-pattern state))
         (windows (flash-state-windows state))
         (case-fold-search flash-case-fold)
+        (seen (make-hash-table :test 'equal))
         matches)
     (when (> (length pattern) 0)
       (dolist (win windows)
@@ -32,18 +33,23 @@ Updates STATE matches field with found matches."
           (with-selected-window win
             (save-excursion
               (goto-char (window-start win))
-              (let ((limit (window-end win t)))
+              (let ((limit (window-end win t))
+                    (buf (window-buffer win)))
                 (while (search-forward pattern limit t)
                   (let* ((pos (match-beginning 0))
-                         (end-pos (match-end 0))
-                         (fold (flash--get-fold-at pos)))
-                    (push (make-flash-match
-                           :pos (copy-marker pos)
-                           :end-pos (copy-marker end-pos)
-                           :label nil
-                           :window win
-                           :fold fold)
-                          matches)))))))))
+                         (key (cons buf pos)))
+                    ;; Skip duplicate positions from other windows
+                    (unless (gethash key seen)
+                      (puthash key t seen)
+                      (let ((end-pos (match-end 0))
+                            (fold (flash--get-fold-at pos)))
+                        (push (make-flash-match
+                               :pos (copy-marker pos)
+                               :end-pos (copy-marker end-pos)
+                               :label nil
+                               :window win
+                               :fold fold)
+                              matches)))))))))))
     (setf (flash-state-matches state) (nreverse matches))))
 
 (defun flash--get-fold-at (pos)

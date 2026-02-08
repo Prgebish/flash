@@ -12,7 +12,6 @@
 ;;
 ;; Usage:
 ;;   M-x flash-treesitter     ; Show labels for nodes at point
-;;   M-x flash-treesitter-search  ; Search + show treesitter nodes
 
 ;;; Code:
 
@@ -29,6 +28,7 @@
 (declare-function treesit-parser-list "treesit")
 (declare-function treesit-buffer-root-node "treesit")
 (declare-function treesit-available-p "treesit")
+(declare-function evil-visual-char "evil-commands")
 
 (defvar flash-labels)
 (defvar flash-backdrop)
@@ -119,12 +119,13 @@ Returns list of (START END TYPE DEPTH) for each node."
           (overlay-put ov 'priority 200)
           (push ov (flash-state-overlays state)))))))
 
-;;; Main commands
+;;; Main command
 
 ;;;###autoload
 (defun flash-treesitter ()
   "Show labels for treesitter nodes at point.
-Press a label to select that node's range."
+Press a label to select that node's range.
+With evil-mode, enters visual state for the selection."
   (interactive)
   (unless (flash-treesitter--available-p)
     (user-error "Treesitter is not available in this Emacs"))
@@ -141,6 +142,11 @@ Press a label to select that node's range."
     (unwind-protect
         (flash-treesitter--loop state)
       (flash-state-cleanup state))))
+
+;;;###autoload
+(defalias 'flash-treesitter-evil #'flash-treesitter
+  "Deprecated alias for `flash-treesitter'.
+`flash-treesitter' now auto-detects evil-mode.")
 
 (defun flash-treesitter--loop (state)
   "Input loop for treesitter STATE."
@@ -171,70 +177,8 @@ Press a label to select that node's range."
               (beep)))))))))
 
 (defun flash-treesitter--select-match (match)
-  "Select the range of MATCH."
-  (let ((start (marker-position (flash-match-pos match)))
-        (end (marker-position (flash-match-end-pos match))))
-    ;; Set mark and move point to create selection
-    (goto-char start)
-    (push-mark end t t)
-    (message "Selected %d characters" (- end start))))
-
-;;; Evil integration
-
-(declare-function evil-visual-make-region "evil-visual")
-(declare-function evil-visual-char "evil-commands")
-(defvar evil-visual-char)
-
-;;;###autoload
-(defun flash-treesitter-evil ()
-  "Treesitter node selection with evil visual mode."
-  (interactive)
-  (unless (flash-treesitter--available-p)
-    (user-error "Treesitter is not available in this Emacs"))
-  (unless (flash-treesitter--buffer-has-parser-p)
-    (user-error "No treesitter parser for this buffer"))
-  (let* ((nodes (flash-treesitter--get-nodes-at-point))
-         (matches (flash-treesitter--nodes-to-matches nodes))
-         (state (flash-state-create (list (selected-window)))))
-    (unless nodes
-      (user-error "No treesitter nodes at point"))
-    (setf (flash-state-matches state) matches)
-    (setf (flash-state-start-window state) (selected-window))
-    (setf (flash-state-start-point state) (point))
-    (unwind-protect
-        (flash-treesitter--evil-loop state)
-      (flash-state-cleanup state))))
-
-(defun flash-treesitter--evil-loop (state)
-  "Input loop for treesitter STATE with evil support."
-  (catch 'flash-ts-done
-    (while t
-      (flash-treesitter--highlight state)
-      (redisplay t)
-      (let ((char (read-char "Treesitter node: ")))
-        (cond
-         ;; Escape - cancel
-         ((= char ?\e)
-          (throw 'flash-ts-done nil))
-         ;; Enter - select innermost node
-         ((= char ?\r)
-          (when-let ((match (car (flash-state-matches state))))
-            (flash-treesitter--evil-select match))
-          (throw 'flash-ts-done t))
-         ;; Try to find matching label
-         (t
-          (let* ((char-str (char-to-string char))
-                 (match (cl-find-if (lambda (m)
-                                      (equal (flash-match-label m) char-str))
-                                    (flash-state-matches state))))
-            (if match
-                (progn
-                  (flash-treesitter--evil-select match)
-                  (throw 'flash-ts-done t))
-              (beep)))))))))
-
-(defun flash-treesitter--evil-select (match)
-  "Select the range of MATCH using evil visual mode."
+  "Select the range of MATCH.
+Uses evil visual mode when evil is loaded, otherwise sets Emacs region."
   (let ((start (marker-position (flash-match-pos match)))
         (end (marker-position (flash-match-end-pos match))))
     (if (featurep 'evil)
@@ -242,9 +186,9 @@ Press a label to select that node's range."
           (goto-char start)
           (evil-visual-char)
           (goto-char (1- end)))
-      ;; Fallback for non-evil
       (goto-char start)
-      (push-mark end t t))))
+      (push-mark end t t)
+      (message "Selected %d characters" (- end start)))))
 
 (provide 'flash-treesitter)
 ;;; flash-treesitter.el ends here

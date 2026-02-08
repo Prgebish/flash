@@ -95,5 +95,26 @@
     (insert "visible text")
     (should (null (flash--get-fold-at 5)))))
 
+(ert-deftest flash-search-dedup-same-buffer-test ()
+  "Test that duplicate positions from multiple windows are deduplicated.
+When two windows show the same buffer, each position should appear only once."
+  (let ((buf (generate-new-buffer "*flash-search-dedup*"))
+        win2)
+    (unwind-protect
+        (progn
+          (with-current-buffer buf
+            (insert "foo bar foo baz foo"))
+          (set-window-buffer (selected-window) buf)
+          (setq win2 (split-window-right))
+          (set-window-buffer win2 buf)
+          (let ((state (flash-state-create (list (selected-window) win2))))
+            (setf (flash-state-pattern state) "foo")
+            (flash-search state)
+            ;; Should find 3 matches (not 6), deduplicating across windows
+            (should (= 3 (length (flash-state-matches state))))))
+      (when (window-live-p win2)
+        (delete-window win2))
+      (kill-buffer buf))))
+
 (provide 'flash-search-test)
 ;;; flash-search-test.el ends here
