@@ -1,8 +1,7 @@
 ;;; flash-isearch.el --- Search integration for flash -*- lexical-binding: t -*-
 
-;; Copyright (C) 2025
-;; Author: chestnykh
-;; Package-Requires: ((emacs "27.1"))
+;; Copyright (C) 2025 Vadim Pavlov
+;; Author: Vadim Pavlov
 
 ;;; Commentary:
 ;; Flash labels during incremental search (evil-ex-search and isearch).

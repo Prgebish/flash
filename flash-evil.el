@@ -1,8 +1,7 @@
 ;;; flash-evil.el --- Evil integration for flash -*- lexical-binding: t -*-
 
-;; Copyright (C) 2025
-;; Author: chestnykh
-;; Package-Requires: ((emacs "27.1") (evil "1.0"))
+;; Copyright (C) 2025 Vadim Pavlov
+;; Author: Vadim Pavlov
 
 ;;; Commentary:
 ;; Evil-mode integration for flash.

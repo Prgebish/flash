@@ -1,8 +1,7 @@
 ;;; flash-search.el --- Search functionality for flash -*- lexical-binding: t -*-
 
-;; Copyright (C) 2025
-;; Author: chestnykh
-;; Package-Requires: ((emacs "27.1"))
+;; Copyright (C) 2025 Vadim Pavlov
+;; Author: Vadim Pavlov
 
 ;;; Commentary:
 ;; Search for pattern matches in visible windows.

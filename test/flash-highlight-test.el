@@ -195,8 +195,8 @@ Default shade 5: bg from shade-500, fg from shade-950."
       (flash-highlight-update state)
       ;; Should have 6 overlays (3 matches + 3 labels)
       (should (= 6 (length (flash-state-overlays state))))
-      ;; Check label overlays have different faces
-      (let ((label-ovs (seq-filter (lambda (ov) (overlay-get ov 'after-string))
+      ;; Check label overlays exist (display property for 'overlay position)
+      (let ((label-ovs (seq-filter (lambda (ov) (overlay-get ov 'display))
                                    (flash-state-overlays state))))
         (should (= 3 (length label-ovs)))))))
 

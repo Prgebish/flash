@@ -1,7 +1,7 @@
-;;; flash.el --- Flash-style navigation for Emacs -*- lexical-binding: t -*-
+;;; flash.el --- Flash-style navigation -*- lexical-binding: t -*-
 
-;; Copyright (C) 2025
-;; Author: chestnykh
+;; Copyright (C) 2025 Vadim Pavlov
+;; Author: Vadim Pavlov
 ;; Version: 0.1.0
 ;; Package-Requires: ((emacs "27.1"))
 ;; Keywords: convenience, navigation
