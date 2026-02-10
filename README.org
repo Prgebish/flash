@@ -16,13 +16,13 @@ Unlike [[https://github.com/abo-abo/avy][avy]], =flash= uses *incremental search
 
 ** Features
 
-- *Search Integration*: labels appear during regular =C-s= / =/= / =?= search. Press a label character to jump instantly.
+- *Search Integration*: labels appear during regular =C-s=, =/=, =?= search. Press a label character to jump instantly.
 - *Incremental input*: type as many characters as you need before using a label. No fixed-length input.
-- *Enhanced =f= / =t= / =F= / =T= motions* with multi-match labels.
+- *Enhanced* =f=, =t=, =F=, =T= *motions* with multi-match labels.
 - *Treesitter Integration*: select any parent node of the syntax tree at point with a single keystroke.
 - *Standalone Jump Mode* (core feature): type a character, then press a label to jump where you need.
 - *Multi-window* jumping across all visible windows.
-- *Evil integration*: works as a proper evil motion (composable with operators like =d= / =y= / =c=).
+- *Evil integration*: works as a proper evil motion (composable with operators like =d=, =y=, =c=).
 
 ** Requirements
 
@@ -79,7 +79,7 @@ With evil-mode: press =gs= (or =s= if you bind it manually). I personally find =
 
 *** Search Integration
 
-~flash-isearch-mode~ adds labels to your regular incremental search. It works with =C-s= (Emacs isearch), =/= / =?= (evil-ex-search).
+~flash-isearch-mode~ adds labels to your regular incremental search. It works with =C-s= (Emacs isearch), =/=, =?= (evil-ex-search).
 
 When enabled:
 - Start a search as usual (=C-s= or =/=).
@@ -187,7 +187,7 @@ This is useful for quickly selecting or operating on a surrounding code structur
 (flash-evil-setup t)  ; t = also set up f/t/F/T char motions
 #+end_src
 
-This binds =gs= to ~flash-evil-jump~ in normal, visual, motion, and operator states. With the optional argument, it also replaces =f= / =t= / =F= / =T= with flash-enhanced versions.
+This binds =gs= to ~flash-evil-jump~ in normal, visual, motion, and operator states. With the optional argument, it also replaces =f=, =t=, =F=, =T= with flash-enhanced versions.
 
 *** Manual Setup
 
