@@ -13,6 +13,7 @@
 (defvar flash-backdrop)
 (defvar flash-label-position)
 (defvar flash-rainbow)
+(defvar flash-rainbow-shade)
 
 (ert-deftest flash-highlight-clear-test ()
   "Test that highlight-clear removes all overlays."
@@ -135,22 +136,41 @@
     (should (eq 'flash-label (flash--get-label-face 5)))))
 
 (ert-deftest flash-highlight-rainbow-enabled-test ()
-  "Test that rainbow faces cycle when enabled.
-Uses same 10 colors as flash.nvim: red, amber, lime, green, teal, cyan, blue, violet, fuchsia, rose."
+  "Test that rainbow faces return plists with correct colors.
+Default shade 5: bg from shade-500, fg from shade-950."
+  (let ((flash-rainbow t)
+        (flash-rainbow-shade 5))
+    ;; Red: bg=red-500, fg=red-950
+    (let ((face (flash--get-label-face 0)))
+      (should (listp face))
+      (should (string= "#ef4444" (plist-get face :background)))
+      (should (string= "#450a0a" (plist-get face :foreground))))
+    ;; Amber: bg=amber-500, fg=amber-950
+    (let ((face (flash--get-label-face 1)))
+      (should (string= "#f59e0b" (plist-get face :background)))
+      (should (string= "#451a03" (plist-get face :foreground))))
+    ;; Should cycle after 10
+    (should (equal (flash--get-label-face 0)
+                   (flash--get-label-face 10)))))
+
+(ert-deftest flash-highlight-rainbow-shade-test ()
+  "Test that different shades produce correct bg/fg colors."
   (let ((flash-rainbow t))
-    ;; First 10 indices should return different faces (Tailwind colors)
-    (should (eq 'flash-label-red (flash--get-label-face 0)))
-    (should (eq 'flash-label-amber (flash--get-label-face 1)))
-    (should (eq 'flash-label-lime (flash--get-label-face 2)))
-    (should (eq 'flash-label-green (flash--get-label-face 3)))
-    (should (eq 'flash-label-teal (flash--get-label-face 4)))
-    (should (eq 'flash-label-cyan (flash--get-label-face 5)))
-    (should (eq 'flash-label-blue (flash--get-label-face 6)))
-    (should (eq 'flash-label-violet (flash--get-label-face 7)))
-    (should (eq 'flash-label-fuchsia (flash--get-label-face 8)))
-    (should (eq 'flash-label-rose (flash--get-label-face 9)))
-    ;; Should cycle back
-    (should (eq 'flash-label-red (flash--get-label-face 10)))))
+    ;; Shade 2: pastel bg (200), dark fg (900)
+    (let ((flash-rainbow-shade 2))
+      (let ((face (flash--get-label-face 0)))
+        (should (string= "#fecaca" (plist-get face :background)))   ; red-200
+        (should (string= "#7f1d1d" (plist-get face :foreground))))) ; red-900
+    ;; Shade 5: saturated bg (500), very dark fg (950)
+    (let ((flash-rainbow-shade 5))
+      (let ((face (flash--get-label-face 0)))
+        (should (string= "#ef4444" (plist-get face :background)))   ; red-500
+        (should (string= "#450a0a" (plist-get face :foreground))))) ; red-950
+    ;; Shade 7: dark bg (700), light fg (50)
+    (let ((flash-rainbow-shade 7))
+      (let ((face (flash--get-label-face 0)))
+        (should (string= "#b91c1c" (plist-get face :background)))   ; red-700
+        (should (string= "#fef2f2" (plist-get face :foreground)))))))  ; red-50
 
 (ert-deftest flash-highlight-rainbow-labels-visual-test ()
   "Test that rainbow labels are applied to overlays."

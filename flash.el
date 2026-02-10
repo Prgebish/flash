@@ -89,21 +89,32 @@ Makes labels more visually distinct."
   :type 'boolean
   :group 'flash)
 
+(defcustom flash-rainbow-shade 2
+  "Shade level for rainbow labels (1-9).
+Controls label brightness using Tailwind CSS color shades:
+  1-2: pastel backgrounds, dark text
+  3-4: medium backgrounds, dark text
+  5: saturated backgrounds, very dark text (flash.nvim default)
+  6-9: dark backgrounds, light text
+Only effective when `flash-rainbow' is non-nil."
+  :type 'integer
+  :group 'flash)
+
 (defcustom flash-highlight-matches t
   "When non-nil, highlight matched text.
 When nil, only labels are shown, keeping original syntax highlighting."
   :type 'boolean
   :group 'flash)
 
-(defcustom flash-label-position 'after
+(defcustom flash-label-position 'overlay
   "Where to display the jump label relative to the match.
-- `after': Label appears after the match (default, like flash.nvim)
+- `overlay': Label replaces the first character of the match (default)
+- `after': Label appears after the match (flash.nvim default)
 - `before': Label appears before the match
-- `overlay': Label replaces the first character of the match
 - `eol': Label appears at end of line"
-  :type '(choice (const :tag "After match" after)
+  :type '(choice (const :tag "Over first char" overlay)
+                 (const :tag "After match" after)
                  (const :tag "Before match" before)
-                 (const :tag "Over first char" overlay)
                  (const :tag "End of line" eol))
   :group 'flash)
 

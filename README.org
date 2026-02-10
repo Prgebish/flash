@@ -8,17 +8,19 @@
 
 Inspired by [[https://github.com/folke/flash.nvim][flash.nvim]] for Neovim.
 
+[[file:demo/demo.gif]]
+
 ** Why flash?
 
 Unlike [[https://github.com/abo-abo/avy][avy]], =flash= uses *incremental search*: you type as many characters as you want to narrow down matches, and labels appear alongside the results. Labels are assigned intelligently --- characters that would continue the search pattern are never used as labels, so there is no ambiguity between searching and jumping.
 
 ** Features
 
-- *Search Integration*: labels appear during regular =C-s= / ~/~ / =?= search. Press a label character to jump instantly.
+- *Search Integration*: labels appear during regular =C-s=, =/=, =?= search. Press a label character to jump instantly.
 - *Incremental input*: type as many characters as you need before using a label. No fixed-length input.
 - *Enhanced =f=, =t=, =F=, =T= motions* with multi-match labels.
 - *Treesitter Integration*: select any parent node of the syntax tree at point with a single keystroke.
-- *Standalone Jump Mode*: start a flash search at any time without entering isearch.
+- *Standalone Jump Mode* (core feature): type a character, then press a label to jump where you need.
 - *Multi-window* jumping across all visible windows.
 - *Evil integration*: works as a proper evil motion (composable with operators like =d=, =y=, =c=).
 
@@ -53,6 +55,7 @@ Unlike [[https://github.com/abo-abo/avy][avy]], =flash= uses *incremental search
 
 *** straight.el
 
+
 #+begin_src emacs-lisp
 (straight-use-package
  '(flash :type git :host github :repo "chestnykh/flash"))
@@ -76,7 +79,7 @@ With evil-mode: press =gs= (or =s= if you bind it manually). I personally find =
 
 *** Search Integration
 
-=flash-isearch-mode= adds labels to your regular incremental search. It works with both =C-s= (Emacs isearch) and ~/~ / =?= (evil-ex-search).
+=flash-isearch-mode= adds labels to your regular incremental search. It works with =C-s= (Emacs isearch), =/=, =?= (evil-ex-search).
 
 When enabled:
 - Start a search as usual (=C-s= or =/=).
@@ -123,8 +126,9 @@ This is useful for quickly selecting or operating on a surrounding code structur
 | ~flash-backdrop~           | ~t~                            | Dim non-matching text                              |
 | ~flash-case-fold~          | ~t~                            | Ignore case when searching                         |
 | ~flash-rainbow~            | ~nil~                          | Color labels with a rainbow palette                |
+| ~flash-rainbow-shade~      | ~2~                            | Rainbow brightness 1-9 (pastel to dark)            |
 | ~flash-highlight-matches~  | ~t~                            | Highlight matched text                             |
-| ~flash-label-position~     | ~'after~                       | Where to place labels: after, before, overlay, eol |
+| ~flash-label-position~     | ~'overlay~                     | Where to place labels: overlay, after, before, eol |
 | ~flash-jump-position~      | ~'start~                       | Cursor position after jump: start or end of match  |
 | ~flash-jumplist~           | ~t~                            | Push position to mark ring before jumping          |
 | ~flash-nohlsearch~         | ~nil~                          | Clear search highlighting after jump               |
@@ -164,8 +168,9 @@ This is useful for quickly selecting or operating on a surrounding code structur
   (flash-autojump t)            ; auto-jump when single match
   (flash-backdrop nil)          ; no dimming
   (flash-rainbow t)             ; colorful labels
+  (flash-rainbow-shade 2)       ; 1-9: pastel to dark
   (flash-highlight-matches t)
-  (flash-label-position 'after)
+  (flash-label-position 'overlay)
   (flash-char-jump-labels t)    ; labels on f/t/F/T matches
   (flash-nohlsearch t)          ; clear highlight after jump
   (flash-search-history t))     ; save patterns to isearch history
@@ -206,21 +211,20 @@ If you prefer different keybindings:
 
 ** Faces
 
-| Face                  | Description            |
-|-----------------------+------------------------|
-| ~flash-label~         | Jump label             |
-| ~flash-match~         | Search match highlight |
-| ~flash-backdrop~      | Backdrop (dimmed text) |
-| ~flash-label-red~     | Rainbow label (red)    |
-| ~flash-label-amber~   | Rainbow label (amber)  |
-| ~flash-label-lime~    | Rainbow label (lime)   |
-| ~flash-label-green~   | Rainbow label (green)  |
-| ~flash-label-teal~    | Rainbow label (teal)   |
-| ~flash-label-cyan~    | Rainbow label (cyan)   |
-| ~flash-label-blue~    | Rainbow label (blue)   |
-| ~flash-label-violet~  | Rainbow label (violet) |
-| ~flash-label-fuchsia~ | Rainbow label (fuchsia)|
-| ~flash-label-rose~    | Rainbow label (rose)   |
+| Face            | Description            |
+|-----------------+------------------------|
+| ~flash-label~   | Jump label             |
+| ~flash-match~   | Search match highlight |
+| ~flash-backdrop~ | Backdrop (dimmed text) |
+
+Rainbow labels use dynamic colors from the Tailwind CSS palette (10 colors: red, amber, lime, green, teal, cyan, blue, violet, fuchsia, rose). The brightness is controlled by ~flash-rainbow-shade~:
+
+| Shade | Background | Foreground | Style           |
+|-------+------------+------------+-----------------|
+|   1-2 | light      | dark (900) | pastel (default) |
+|   3-4 | medium     | dark (900) | medium           |
+|     5 | saturated  | dark (950) | flash.nvim default |
+|   6-9 | dark       | light (50) | dark / inverted  |
 
 *** Customizing Faces
 
@@ -236,6 +240,13 @@ If you prefer different keybindings:
                     :underline nil
                     :background "#ffff00"
                     :foreground "#000000")
+
+;; Rainbow: pastel labels
+(setq flash-rainbow t
+      flash-rainbow-shade 2)
+
+;; Rainbow: dark labels with light text
+(setq flash-rainbow-shade 7)
 #+end_src
 
 ** Alternatives
@@ -246,6 +257,10 @@ If you prefer different keybindings:
 ** Credits
 
 Inspired by [[https://github.com/folke/flash.nvim][flash.nvim]] by folke.
+
+** Support
+
+If you find =flash= useful, consider giving it a [[https://github.com/Prgebish/flash][star on GitHub]] --- it helps others discover the project.
 
 ** License
 

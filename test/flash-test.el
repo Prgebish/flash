@@ -57,6 +57,11 @@
   (should (boundp 'flash-highlight-matches))
   (should (booleanp flash-highlight-matches)))
 
+(ert-deftest flash-defcustom-rainbow-shade-test ()
+  "Test that rainbow-shade defcustom exists and defaults to 2."
+  (should (boundp 'flash-rainbow-shade))
+  (should (= 2 flash-rainbow-shade)))
+
 (ert-deftest flash-defcustom-multi-char-labels-test ()
   "Test that multi-char-labels defcustom exists."
   (should (boundp 'flash-multi-char-labels))
