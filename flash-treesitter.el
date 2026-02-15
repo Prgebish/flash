@@ -1,7 +1,9 @@
 ;;; flash-treesitter.el --- Treesitter integration for flash -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2025 Vadim Pavlov
-;; Author: Vadim Pavlov
+;; Author: Vadim Pavlov <https://github.com/Prgebish>
+;; Package-Requires: ((emacs "29.1"))
+;; SPDX-License-Identifier: MIT
 
 ;;; Commentary:
 ;; Treesitter-based navigation for flash.

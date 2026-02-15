@@ -1,7 +1,8 @@
 ;;; flash-isearch.el --- Search integration for flash -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2025 Vadim Pavlov
-;; Author: Vadim Pavlov
+;; Author: Vadim Pavlov <https://github.com/Prgebish>
+;; SPDX-License-Identifier: MIT
 
 ;;; Commentary:
 ;; Flash labels during incremental search (evil-ex-search and isearch).

@@ -1,7 +1,8 @@
 ;;; flash-char.el --- Character motions for flash -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2025 Vadim Pavlov
-;; Author: Vadim Pavlov
+;; Author: Vadim Pavlov <https://github.com/Prgebish>
+;; SPDX-License-Identifier: MIT
 
 ;;; Commentary:
 ;; Enhanced f/t/F/T character motions with visual labels.
@@ -85,7 +86,7 @@ Searches current line only unless `flash-char-multi-line' is non-nil."
         positions)
     (save-excursion
       ;; Move one char in search direction to avoid matching at point
-      (when (and forward (< (point) (point-max)))
+      (when (and forward (not (eobp)))
         (forward-char 1))
       (if forward
           (while (search-forward (char-to-string char) limit t)

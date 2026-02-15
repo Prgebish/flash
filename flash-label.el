@@ -1,7 +1,8 @@
 ;;; flash-label.el --- Label assignment for flash -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2025 Vadim Pavlov
-;; Author: Vadim Pavlov
+;; Author: Vadim Pavlov <https://github.com/Prgebish>
+;; SPDX-License-Identifier: MIT
 
 ;;; Commentary:
 ;; Smart label assignment with conflict detection.

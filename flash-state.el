@@ -1,7 +1,8 @@
 ;;; flash-state.el --- State management for flash -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2025 Vadim Pavlov
-;; Author: Vadim Pavlov
+;; Author: Vadim Pavlov <https://github.com/Prgebish>
+;; SPDX-License-Identifier: MIT
 
 ;;; Commentary:
 ;; Defines data structures for flash jump sessions.

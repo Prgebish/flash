@@ -1,7 +1,8 @@
 ;;; flash-highlight.el --- Highlighting for flash -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2025 Vadim Pavlov
-;; Author: Vadim Pavlov
+;; Author: Vadim Pavlov <https://github.com/Prgebish>
+;; SPDX-License-Identifier: MIT
 
 ;;; Commentary:
 ;; Visual feedback using overlays: backdrop, match highlighting, labels.
