@@ -1,7 +1,3 @@
-#+TITLE: flash
-#+AUTHOR: Vadim
-#+OPTIONS: toc:2
-
 * flash
 
 [[https://melpa.org/#/flash][file:https://melpa.org/packages/flash-badge.svg]]
