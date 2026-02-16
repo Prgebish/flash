@@ -73,14 +73,6 @@ Uppercase labels never conflict with search continuation."
   :type 'boolean
   :group 'flash)
 
-(defcustom flash-multi-char-labels nil
-  "When non-nil, use multi-character labels (aa, as, ad...) when needed.
-Multi-char labels are used when matches exceed available single-char labels.
-When nil, only single-character labels are used and excess matches stay
-unlabeled."
-  :type 'boolean
-  :group 'flash)
-
 (defcustom flash-multi-window t
   "When non-nil, search in all visible windows."
   :type 'boolean

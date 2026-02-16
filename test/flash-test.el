@@ -62,11 +62,6 @@
   (should (boundp 'flash-rainbow-shade))
   (should (= 2 flash-rainbow-shade)))
 
-(ert-deftest flash-defcustom-multi-char-labels-test ()
-  "Test that multi-char-labels defcustom exists."
-  (should (boundp 'flash-multi-char-labels))
-  (should (booleanp flash-multi-char-labels)))
-
 ;;; Phase 7 defcustom tests
 
 (ert-deftest flash-defcustom-jumplist-test ()

@@ -141,18 +141,23 @@
       (flash-label-matches state)
       (should (null (flash-state-matches state))))))
 
-(ert-deftest flash-label-more-matches-than-labels-test ()
-  "Test multi-char labels when matches exceed single-char capacity.
-With 2 label chars (a,b), we can generate 4 two-char labels (aa,ab,ba,bb)."
+(ert-deftest flash-label-mixed-labeling-test ()
+  "Test automatic mixed labeling: single-char for close, multi-char for far.
+With 2 label chars (a,b) and 5 matches: P=1 prefix needed.
+Singles: first 1 char (a) = 1 label.  Multi: prefix b * singles (a) = 1.
+Capacity (N-P)*(1+P) = 1*2 = 2, not enough for 5.
+With 3 chars (a,b,c): P=1, singles=2 (a,b), prefix=c, capacity=2*2=4, not enough.
+P=2, singles=1 (a), prefixes=(b,c), capacity=1*3=3, not enough.
+Use 4 chars (a,b,c,d): P=1, singles=3, prefix=d, capacity=3*2=6 >= 5."
   (with-temp-buffer
-    (insert (make-string 100 ?x))  ; 100 x's
+    (insert (make-string 100 ?x))
     (goto-char (point-min))
     (set-window-buffer (selected-window) (current-buffer))
-    (let* ((flash-labels "ab")  ; 2 chars = 4 two-char labels
-           (flash-label-uppercase nil)  ; no uppercase for this test
-           (flash-multi-char-labels t)  ; enabled
+    (let* ((flash-labels "abcd")
+           (flash-label-uppercase nil)
            (state (flash-state-create (list (selected-window)))))
-      ;; Create 5 matches
+      ;; Create 5 matches at increasing distances from point-min
+      (setf (flash-state-start-point state) 1)
       (setf (flash-state-matches state)
             (cl-loop for i from 1 to 5
                      collect (make-flash-match
@@ -162,27 +167,39 @@ With 2 label chars (a,b), we can generate 4 two-char labels (aa,ab,ba,bb)."
                               :window (selected-window)
                               :fold nil)))
       (flash-label-matches state)
-      ;; 4 matches should have two-char labels (aa, ab, ba, bb)
+      ;; All 5 matches should be labeled
       (let ((labeled (cl-count-if #'flash-match-label
                                   (flash-state-matches state))))
-        (should (= 4 labeled)))
-      ;; Labels should be multi-char
-      (let ((first-label (flash-match-label
-                          (car (flash-state-matches state)))))
-        (should (= 2 (length first-label)))))))
+        (should (= 5 labeled)))
+      ;; Closest match should have single-char label
+      ;; (match at pos 10, closest to start-point 1)
+      (let* ((sorted-by-dist (sort (copy-sequence (flash-state-matches state))
+                                   (lambda (a b)
+                                     (< (marker-position (flash-match-pos a))
+                                        (marker-position (flash-match-pos b))))))
+             (closest (car sorted-by-dist)))
+        (should (= 1 (length (flash-match-label closest)))))
+      ;; Farthest match should have multi-char label
+      (let* ((sorted-by-dist (sort (copy-sequence (flash-state-matches state))
+                                   (lambda (a b)
+                                     (< (marker-position (flash-match-pos a))
+                                        (marker-position (flash-match-pos b))))))
+             (farthest (car (last sorted-by-dist))))
+        (should (= 2 (length (flash-match-label farthest))))))))
 
-(ert-deftest flash-label-single-char-only-test ()
-  "Test that multi-char labels are disabled when flash-multi-char-labels is nil.
-With 2 label chars (a,b) and 5 matches, only 2 should get labels."
+(ert-deftest flash-label-no-prefix-collision-test ()
+  "Test that single-char labels don't share chars with multi-char prefixes.
+With 4 chars (a,b,c,d) and 5 matches, P=1.
+Singles: a,b,c (first 3 chars).  Prefix: d (last char).
+No single-char label should equal any multi-char prefix."
   (with-temp-buffer
-    (insert (make-string 100 ?x))  ; 100 x's
+    (insert (make-string 100 ?x))
     (goto-char (point-min))
     (set-window-buffer (selected-window) (current-buffer))
-    (let* ((flash-labels "ab")  ; 2 chars
-           (flash-label-uppercase nil)  ; no uppercase for this test
-           (flash-multi-char-labels nil)  ; disabled
+    (let* ((flash-labels "abcd")
+           (flash-label-uppercase nil)
            (state (flash-state-create (list (selected-window)))))
-      ;; Create 5 matches
+      (setf (flash-state-start-point state) 1)
       (setf (flash-state-matches state)
             (cl-loop for i from 1 to 5
                      collect (make-flash-match
@@ -192,14 +209,13 @@ With 2 label chars (a,b) and 5 matches, only 2 should get labels."
                               :window (selected-window)
                               :fold nil)))
       (flash-label-matches state)
-      ;; Only 2 matches should have labels (single-char only)
-      (let ((labeled (cl-count-if #'flash-match-label
-                                  (flash-state-matches state))))
-        (should (= 2 labeled)))
-      ;; Labels should be single-char
-      (let ((first-label (flash-match-label
-                          (car (flash-state-matches state)))))
-        (should (= 1 (length first-label)))))))
+      (let* ((labels (mapcar #'flash-match-label (flash-state-matches state)))
+             (single-labels (cl-remove-if-not (lambda (l) (= (length l) 1)) labels))
+             (multi-labels (cl-remove-if-not (lambda (l) (> (length l) 1)) labels))
+             (prefixes (delete-dups (mapcar (lambda (l) (substring l 0 1)) multi-labels))))
+        ;; No single-char label should be a multi-char prefix
+        (dolist (s single-labels)
+          (should-not (member s prefixes)))))))
 
 (ert-deftest flash-label-prefix-matching-test ()
   "Test prefix matching for multi-char labels."

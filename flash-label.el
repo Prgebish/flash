@@ -17,7 +17,6 @@
 
 (defvar flash-labels)
 (defvar flash-label-uppercase)
-(defvar flash-multi-char-labels)
 (defvar flash-case-fold)
 
 ;;; Label Functions
@@ -42,30 +41,38 @@ Uses multi-char labels when matches exceed available single-char labels."
 
 (defun flash--generate-labels (chars count)
   "Generate COUNT labels from CHARS.  Return them as strings.
-Returns list of strings.  Uses single chars when possible.
-When `flash-multi-char-labels' is non-nil and COUNT > (length CHARS),
-generates multi-char labels (aa, as, ad, ...).
-When `flash-multi-char-labels' is nil, excess matches remain unlabeled."
+Returns list of strings.  When COUNT <= (length CHARS), all labels are
+single-char.  Otherwise, partition CHARS: reserve the last P chars as
+multi-char prefixes, use the remaining N-P as single-char labels.
+Multi-char labels are prefix + any non-prefix char, giving P*(N-P)
+combinations.  Total capacity: (N-P)*(1+P).  Single-char labels never
+collide with multi-char prefixes, so exact-match dispatch works."
   (let ((n (length chars)))
     (if (<= count n)
-        ;; Single char labels
+        ;; All single-char labels
         (mapcar #'char-to-string (cl-subseq chars 0 count))
-      ;; More matches than single chars
-      (if flash-multi-char-labels
-          ;; Multi-char labels enabled
-          (let ((labels nil)
-                (needed count))
-            ;; Generate two-char combinations
-            (catch 'done
-              (dolist (c1 chars)
-                (dolist (c2 chars)
-                  (push (string c1 c2) labels)
-                  (cl-decf needed)
-                  (when (<= needed 0)
-                    (throw 'done nil)))))
-            (nreverse labels))
-        ;; Multi-char disabled - only use available single chars
-        (mapcar #'char-to-string chars)))))
+      ;; Find minimum P (prefix count) such that (N-P)*(1+P) >= count
+      (let ((p 1))
+        (while (and (< p n)
+                    (< (* (- n p) (1+ p)) count))
+          (cl-incf p))
+        ;; Clamp: need at least 1 single-char slot
+        (when (>= p n) (setq p (1- n)))
+        (let* ((singles (cl-subseq chars 0 (- n p)))
+               (prefixes (cl-subseq chars (- n p)))
+               (labels (mapcar #'char-to-string singles))
+               (multi nil)
+               (needed (- count (length labels))))
+          ;; Generate multi-char labels: each prefix paired with each single
+          (catch 'done
+            (dolist (pre prefixes)
+              (dolist (suf singles)
+                (push (string pre suf) multi)
+                (cl-decf needed)
+                (when (<= needed 0)
+                  (throw 'done nil)))))
+          ;; Singles first (closest matches), then multi (farthest)
+          (append labels (nreverse multi)))))))
 
 (defun flash--available-labels (state pattern)
   "Return labels that won't conflict with PATTERN continuation.
