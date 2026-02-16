@@ -4,6 +4,8 @@
 
 * flash
 
+[[https://melpa.org/#/flash][file:https://melpa.org/packages/flash-badge.svg]]
+
 =flash= lets you navigate your code with search labels, enhanced character motions, and Treesitter integration.
 
 Inspired by [[https://github.com/folke/flash.nvim][flash.nvim]] for Neovim.
@@ -32,11 +34,15 @@ Unlike [[https://github.com/abo-abo/avy][avy]], =flash= uses *incremental search
 
 ** Installation
 
-*** use-package (from local path)
+*** MELPA
+
+=flash= is available on [[https://melpa.org/#/flash][MELPA]].
 
 #+begin_src emacs-lisp
+;; Add MELPA to package-archives if you haven't already:
+;; (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+
 (use-package flash
-  :load-path "~/path/to/flash"
   :commands (flash-jump flash-jump-continue
              flash-treesitter)
   :bind ("s-j" . flash-jump)
@@ -53,18 +59,19 @@ Unlike [[https://github.com/abo-abo/avy][avy]], =flash= uses *incremental search
   (flash-isearch-mode 1))
 #+end_src
 
-*** straight.el
+Or install interactively: =M-x package-install RET flash RET=.
 
+*** straight.el
 
 #+begin_src emacs-lisp
 (straight-use-package
- '(flash :type git :host github :repo "chestnykh/flash"))
+ '(flash :type git :host github :repo "Prgebish/flash"))
 #+end_src
 
 *** elpaca
 
 #+begin_src emacs-lisp
-(elpaca (flash :host github :repo "chestnykh/flash"))
+(elpaca (flash :host github :repo "Prgebish/flash"))
 #+end_src
 
 ** Usage
