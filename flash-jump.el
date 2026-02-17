@@ -38,9 +38,11 @@ Clears highlighting if `flash-nohlsearch' is non-nil."
           (fold (flash-match-fold match))
           (jump-pos flash-jump-position))
       ;; Save to jumplist before jumping.
-      ;; Skip in evil visual state: push-mark overwrites the selection
-      ;; anchor (mark), and the evil motion's :jump t handles jumplist.
+      ;; Skip when region is active: push-mark overwrites the selection
+      ;; anchor (mark).  Covers both vanilla Emacs (transient-mark-mode)
+      ;; and evil visual state.
       (when (and flash-jumplist
+                 (not (and transient-mark-mode mark-active))
                  (not (and (bound-and-true-p evil-local-mode)
                            (eq evil-state 'visual))))
         (push-mark nil t))

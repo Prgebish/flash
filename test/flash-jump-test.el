@@ -178,5 +178,49 @@
   "Test that jump-position defcustom exists."
   (should (boundp 'flash-jump-position)))
 
+;;; Mark Preservation Tests
+
+(ert-deftest flash-jump-preserves-mark-with-active-region-test ()
+  "Test that jump does not overwrite mark when region is active."
+  (with-temp-buffer
+    (insert "foo bar baz")
+    (goto-char 1)
+    (set-window-buffer (selected-window) (current-buffer))
+    ;; Activate region from 1 to 4
+    (set-mark 1)
+    (goto-char 4)
+    (let ((transient-mark-mode t)
+          (flash-jumplist t)
+          (original-mark (mark)))
+      (let ((match (make-flash-match
+                    :pos (copy-marker 9)
+                    :end-pos (copy-marker 12)
+                    :label "a"
+                    :window (selected-window)
+                    :fold nil)))
+        (flash-jump-to-match match)
+        ;; Mark should be preserved (not overwritten by push-mark)
+        (should (= original-mark (mark)))))))
+
+(ert-deftest flash-jump-pushes-mark-without-region-test ()
+  "Test that jump pushes mark when no region is active."
+  (with-temp-buffer
+    (insert "foo bar baz")
+    (goto-char 1)
+    (set-window-buffer (selected-window) (current-buffer))
+    (let ((transient-mark-mode t)
+          (flash-jumplist t))
+      ;; Deactivate region
+      (deactivate-mark)
+      (let ((match (make-flash-match
+                    :pos (copy-marker 9)
+                    :end-pos (copy-marker 12)
+                    :label "a"
+                    :window (selected-window)
+                    :fold nil)))
+        (flash-jump-to-match match)
+        ;; Mark should have been pushed (point was 1 before jump)
+        (should (= 1 (mark)))))))
+
 (provide 'flash-jump-test)
 ;;; flash-jump-test.el ends here

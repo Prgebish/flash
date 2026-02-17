@@ -250,7 +250,8 @@ Returns t if jump was made, nil if cancelled."
              (match-count (length (flash-state-matches state)))
              (prompt (flash--format-prompt pattern match-count prefix))
              (char (read-char prompt))
-             (char-str (char-to-string char)))
+             (char-str (and (<= 32 char) (<= char 126)
+                            (char-to-string char))))
         (cond
          ;; Escape - cancel
          ((= char ?\e)
@@ -275,19 +276,25 @@ Returns t if jump was made, nil if cancelled."
                   (substring pattern 0 -1)))))
 
          ;; Check if it completes a label (with current prefix)
-         ((let ((full-label (concat (or prefix "") char-str)))
-            (flash-jump-to-label state full-label))
+         ((and char-str
+               (let ((full-label (concat (or prefix "") char-str)))
+                 (flash-jump-to-label state full-label)))
           (flash--save-pattern state)
           (throw 'flash-done t))
 
          ;; Check if it's a valid label prefix (for multi-char labels)
-         ((flash--valid-label-prefix-p state char-str)
+         ((and char-str (flash--valid-label-prefix-p state char-str))
           (setf (flash-state-label-prefix state) char-str))
 
-         ;; Add to pattern (only if no prefix active)
-         ((not prefix)
+         ;; Add to pattern (only if no prefix active and char is printable)
+         ((and char-str (not prefix))
           (setf (flash-state-pattern state)
                 (concat pattern char-str)))
+
+         ;; Unhandled key - exit and push back for normal command loop
+         ((not char-str)
+          (push char unread-command-events)
+          (throw 'flash-done nil))
 
          ;; Invalid input with prefix - ignore or beep
          (t (beep)))))))
