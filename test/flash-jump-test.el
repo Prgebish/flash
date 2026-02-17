@@ -178,5 +178,51 @@
   "Test that jump-position defcustom exists."
   (should (boundp 'flash-jump-position)))
 
+;;; Mark / Region Preservation Tests
+
+(ert-deftest flash-jump-preserves-mark-when-region-active-test ()
+  "Test that jump does not overwrite mark when region is active.
+When `transient-mark-mode' and `mark-active' are both true,
+`push-mark' should be skipped to preserve the selection anchor."
+  (with-temp-buffer
+    (insert "foo bar baz")
+    (set-window-buffer (selected-window) (current-buffer))
+    (let ((flash-jumplist t)
+          (transient-mark-mode t))
+      ;; Set mark at position 1, move point to 5 to create a region
+      (goto-char 1)
+      (push-mark 1 t t)            ; activate mark
+      (goto-char 5)
+      (should mark-active)
+      (let ((mark-before (mark)))
+        (flash-jump-to-match
+         (make-flash-match
+          :pos (copy-marker 9)
+          :end-pos (copy-marker 12)
+          :label "a"
+          :window (selected-window)
+          :fold nil))
+        ;; Mark should stay at original position, not be overwritten to 5
+        (should (= mark-before (mark)))))))
+
+(ert-deftest flash-jump-pushes-mark-when-no-region-test ()
+  "Test that jump pushes mark when no region is active."
+  (with-temp-buffer
+    (insert "foo bar baz")
+    (set-window-buffer (selected-window) (current-buffer))
+    (let ((flash-jumplist t))
+      (goto-char 5)
+      (deactivate-mark)
+      (should-not mark-active)
+      (flash-jump-to-match
+       (make-flash-match
+        :pos (copy-marker 9)
+        :end-pos (copy-marker 12)
+        :label "a"
+        :window (selected-window)
+        :fold nil))
+      ;; Mark should have been pushed at pre-jump position (5)
+      (should (= 5 (mark))))))
+
 (provide 'flash-jump-test)
 ;;; flash-jump-test.el ends here

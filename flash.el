@@ -148,7 +148,9 @@ When nil, only labels are shown, keeping original syntax highlighting."
 (defcustom flash-jumplist t
   "When non-nil, save position to mark ring before jumping.
 This allows returning to the previous position with `C-u C-SPC'
-or `C-x C-SPC' (global mark), or with evil's `C-o'."
+or `C-x C-SPC' (global mark), or with evil's `C-o'.
+When the mark is active (region or evil visual state), the mark
+is not pushed, preserving the existing selection anchor."
   :type 'boolean
   :group 'flash)
 
