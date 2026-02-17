@@ -20,11 +20,7 @@
 ;;; Code:
 
 (require 'cl-lib)
-(require 'flash-state)
-(require 'flash-search)
-(require 'flash-label)
-(require 'flash-highlight)
-(require 'flash-jump)
+(require 'flash)
 
 ;;; Customization
 
@@ -78,7 +74,6 @@ When set (e.g. \";\"), you must type trigger + label to jump."
 (defvar isearch-string)
 (defvar isearch-forward)
 (defvar isearch-mode-map)
-(defvar flash-multi-window)
 
 (declare-function isearch-exit "isearch")
 
