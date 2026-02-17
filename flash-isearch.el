@@ -81,18 +81,19 @@ When set (e.g. \";\"), you must type trigger + label to jump."
 
 (defun flash-isearch--start ()
   "Start flash search mode."
+  (setq flash-isearch--active nil)
+  (setq flash-isearch--in-session t)
+  (setq flash-isearch--original-buffer (current-buffer))
+  (let ((state (flash-state-create
+                (if (bound-and-true-p flash-multi-window)
+                    (window-list nil 'no-minibuf)
+                  (list (selected-window))))))
+    ;; Search integration: check label conflicts in whole buffer
+    ;; because search can jump to matches anywhere, not just visible area
+    (setf (flash-state-whole-buffer state) t)
+    (setq flash-isearch--state state))
   (when flash-isearch-enabled
-    (setq flash-isearch--active t)
-    (setq flash-isearch--in-session t)
-    (setq flash-isearch--original-buffer (current-buffer))
-    (let ((state (flash-state-create
-                  (if (bound-and-true-p flash-multi-window)
-                      (window-list nil 'no-minibuf)
-                    (list (selected-window))))))
-      ;; Search integration: check label conflicts in whole buffer
-      ;; because search can jump to matches anywhere, not just visible area
-      (setf (flash-state-whole-buffer state) t)
-      (setq flash-isearch--state state))))
+    (flash-isearch--toggle)))
 
 (defun flash-isearch--stop ()
   "Stop flash search mode and clean up."
