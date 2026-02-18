@@ -51,14 +51,18 @@ so label conflict detection must check entire buffer."
       (should-not flash-isearch--original-buffer))))
 
 (ert-deftest flash-isearch-disabled-test ()
-  "Test that nothing happens when disabled."
+  "Test that session is created but labels inactive when disabled."
   (with-temp-buffer
     (insert "hello world")
     (set-window-buffer (selected-window) (current-buffer))
     (let ((flash-isearch-enabled nil))
       (flash-isearch--start)
       (should-not flash-isearch--active)
-      (should-not flash-isearch--state))))
+      ;; State is created so toggle can activate labels later
+      (should flash-isearch--state)
+      (should flash-isearch--in-session)
+      ;; Cleanup
+      (flash-isearch--stop))))
 
 ;;; Update Tests
 
@@ -112,6 +116,24 @@ so label conflict detection must check entire buffer."
       ;; Toggle on
       (flash-isearch--toggle)
       (should flash-isearch--active)
+      ;; Cleanup
+      (flash-isearch--stop))))
+
+(ert-deftest flash-isearch-toggle-from-disabled-test ()
+  "Test that toggle activates labels when isearch-enabled is nil."
+  (with-temp-buffer
+    (insert "foo bar foo baz foo")
+    (goto-char (point-min))
+    (set-window-buffer (selected-window) (current-buffer))
+    (let ((flash-isearch-enabled nil)
+          (isearch-mode t)
+          (isearch-string "foo"))
+      (flash-isearch--start)
+      (should-not flash-isearch--active)
+      ;; Toggle on — should activate and show labels
+      (flash-isearch--toggle)
+      (should flash-isearch--active)
+      (should (> (length (flash-state-matches flash-isearch--state)) 0))
       ;; Cleanup
       (flash-isearch--stop))))
 
