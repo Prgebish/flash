@@ -278,6 +278,82 @@ Default shade 5: bg from shade-500, fg from shade-950."
         ;; after-string should contain label (with space prefix)
         (should (string-match-p "x" (overlay-get label-ov 'after-string)))))))
 
+(ert-deftest flash-highlight-label-position-pre-overlay-mid-line-test ()
+  "Test pre-overlay replaces char before match (mid-line)."
+  (with-temp-buffer
+    (insert "foo bar")
+    (goto-char (point-min))
+    (set-window-buffer (selected-window) (current-buffer))
+    (let ((state (flash-state-create (list (selected-window))))
+          (flash-backdrop nil)
+          (flash-label-position 'pre-overlay))
+      ;; Match "bar" at position 5
+      (setf (flash-state-matches state)
+            (list (make-flash-match
+                   :pos (copy-marker 5)
+                   :end-pos (copy-marker 8)
+                   :label "x"
+                   :window (selected-window)
+                   :fold nil)))
+      (flash-highlight-update state)
+      (let ((label-ov (seq-find (lambda (ov) (overlay-get ov 'display))
+                                (flash-state-overlays state))))
+        (should label-ov)
+        (should (string= "x" (overlay-get label-ov 'display)))
+        ;; Should cover char before match (position 4 = space)
+        (should (= 4 (overlay-start label-ov)))
+        (should (= 5 (overlay-end label-ov)))))))
+
+(ert-deftest flash-highlight-label-position-pre-overlay-bol-test ()
+  "Test pre-overlay falls back to first char at beginning of line."
+  (with-temp-buffer
+    (insert "foo\nbar")
+    (goto-char (point-min))
+    (set-window-buffer (selected-window) (current-buffer))
+    (let ((state (flash-state-create (list (selected-window))))
+          (flash-backdrop nil)
+          (flash-label-position 'pre-overlay))
+      ;; Match "bar" at position 5 (beginning of second line)
+      (setf (flash-state-matches state)
+            (list (make-flash-match
+                   :pos (copy-marker 5)
+                   :end-pos (copy-marker 8)
+                   :label "x"
+                   :window (selected-window)
+                   :fold nil)))
+      (flash-highlight-update state)
+      (let ((label-ov (seq-find (lambda (ov) (overlay-get ov 'display))
+                                (flash-state-overlays state))))
+        (should label-ov)
+        ;; Fallback: overlay on first char of match
+        (should (= 5 (overlay-start label-ov)))
+        (should (= 6 (overlay-end label-ov)))))))
+
+(ert-deftest flash-highlight-label-position-pre-overlay-bob-test ()
+  "Test pre-overlay falls back to first char at beginning of buffer."
+  (with-temp-buffer
+    (insert "foo bar")
+    (goto-char (point-min))
+    (set-window-buffer (selected-window) (current-buffer))
+    (let ((state (flash-state-create (list (selected-window))))
+          (flash-backdrop nil)
+          (flash-label-position 'pre-overlay))
+      ;; Match "foo" at position 1 (beginning of buffer)
+      (setf (flash-state-matches state)
+            (list (make-flash-match
+                   :pos (copy-marker 1)
+                   :end-pos (copy-marker 4)
+                   :label "x"
+                   :window (selected-window)
+                   :fold nil)))
+      (flash-highlight-update state)
+      (let ((label-ov (seq-find (lambda (ov) (overlay-get ov 'display))
+                                (flash-state-overlays state))))
+        (should label-ov)
+        ;; Fallback: overlay on first char of match
+        (should (= 1 (overlay-start label-ov)))
+        (should (= 2 (overlay-end label-ov)))))))
+
 (ert-deftest flash-highlight-label-position-defcustom-test ()
   "Test that label-position defcustom exists."
   (should (boundp 'flash-label-position)))

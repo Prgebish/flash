@@ -128,10 +128,12 @@ When nil, only labels are shown, keeping original syntax highlighting."
 (defcustom flash-label-position 'overlay
   "Where to display the jump label relative to the match.
 - `overlay': Label replaces the first character of the match (default)
+- `pre-overlay': Label replaces the character before the match
 - `after': Label appears after the match (flash.nvim default)
 - `before': Label appears before the match
 - `eol': Label appears at end of line"
   :type '(choice (const :tag "Over first char" overlay)
+                 (const :tag "Over char before match" pre-overlay)
                  (const :tag "After match" after)
                  (const :tag "Before match" before)
                  (const :tag "End of line" eol))

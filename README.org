@@ -131,12 +131,20 @@ This is useful for quickly selecting or operating on a surrounding code structur
 | ~flash-rainbow~            | ~nil~                          | Color labels with a rainbow palette                |
 | ~flash-rainbow-shade~      | ~2~                            | Rainbow brightness 1-9 (pastel to dark)            |
 | ~flash-highlight-matches~  | ~t~                            | Highlight matched text                             |
-| ~flash-label-position~     | ~'overlay~                     | Where to place labels: overlay, after, before, eol |
+| ~flash-label-position~     | ~'overlay~                     | Where to place labels: overlay, pre-overlay, after, before, eol |
 | ~flash-jump-position~      | ~'start~                       | Cursor position after jump: start or end of match  |
 | ~flash-jumplist~           | ~t~                            | Push position to mark ring before jumping          |
 | ~flash-nohlsearch~         | ~nil~                          | Clear search highlighting after jump               |
 | ~flash-search-history~     | ~nil~                          | Add search pattern to isearch history              |
 | ~flash-min-pattern-length~ | ~0~                            | Minimum pattern length before labels appear        |
+
+**** Label Positions
+
+- ~overlay~ (default) --- label replaces the first character of the match.
+- ~pre-overlay~ --- label replaces the character *before* the match. The match text stays fully readable and there is no text shift. Falls back to ~overlay~ when the match is at the beginning of a line or buffer.
+- ~after~ --- label is inserted after the match (flash.nvim default).
+- ~before~ --- label is inserted before the match.
+- ~eol~ --- label appears at the end of the line.
 
 *** Char Motion Options
 

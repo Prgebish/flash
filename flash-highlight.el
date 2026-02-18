@@ -157,6 +157,15 @@ FACE is the label face, POSITION is where to place the label."
        ;; Label replaces first character
        (setq ov (make-overlay pos (1+ pos)))
        (overlay-put ov 'display label-str))
+      ('pre-overlay
+       ;; Label replaces character before match; fallback to overlay
+       (if (and (> pos (point-min))
+                (not (eq (char-before pos) ?\n)))
+           (progn
+             (setq ov (make-overlay (1- pos) pos))
+             (overlay-put ov 'display label-str))
+         (setq ov (make-overlay pos (1+ pos)))
+         (overlay-put ov 'display label-str)))
       ('eol
        ;; Label at end of line
        (save-excursion
