@@ -161,6 +161,8 @@ This is useful for quickly selecting or operating on a surrounding code structur
 | ~flash-isearch-enabled~    | ~t~     | Show labels during search                    |
 | ~flash-isearch-toggle-key~ | ~"C-;"~ | Key to toggle labels on/off during search    |
 | ~flash-isearch-trigger~    | ~nil~   | Require a trigger character before label jump |
+| ~flash-isearch-update-delay~ | ~0.05~ | Debounce delay for isearch updates (seconds) |
+| ~flash-isearch-label-limit~ | ~'single-char~ | Max matches rendered during isearch: ~single-char~, ~full~, or integer |
 
 *** Treesitter Options
 

@@ -50,6 +50,23 @@ When set (e.g. \";\"), you must type trigger + label to jump."
                  (string :tag "Trigger character"))
   :group 'flash-isearch)
 
+(defcustom flash-isearch-update-delay 0.05
+  "Idle delay before updating flash labels during `isearch'.
+Higher values reduce update frequency in large buffers.
+Set to 0 to disable debounce and update on every hook call."
+  :type 'number
+  :group 'flash-isearch)
+
+(defcustom flash-isearch-label-limit 'single-char
+  "Maximum matches to label and highlight during `isearch'.
+`single-char' (default) limits to one-char label capacity.
+`full' uses full flash capacity (two-char labels when enabled).
+Integer N limits to N nearest matches."
+  :type '(choice (const :tag "Single-char capacity (fastest)" single-char)
+                 (const :tag "Full flash capacity" full)
+                 (integer :tag "Fixed match count"))
+  :group 'flash-isearch)
+
 ;;; State Variables
 
 (defvar flash-isearch--state nil
@@ -67,6 +84,9 @@ When set (e.g. \";\"), you must type trigger + label to jump."
 (defvar flash-isearch--original-buffer nil
   "Buffer where search started.")
 
+(defvar flash-isearch--update-timer nil
+  "Idle timer used to debounce `isearch' updates.")
+
 ;;; Forward declarations
 (defvar evil-ex-search-direction)
 (defvar evil-ex-search-start-point)
@@ -74,15 +94,27 @@ When set (e.g. \";\"), you must type trigger + label to jump."
 (defvar isearch-string)
 (defvar isearch-forward)
 (defvar isearch-mode-map)
+(defvar isearch-case-fold-search)
+(defvar flash-min-pattern-length)
 
 (declare-function isearch-exit "isearch")
+(declare-function flash-match-pos-value "flash-state" (match))
+(declare-function flash-match-end-pos-value "flash-state" (match))
+(declare-function flash-match-buffer-live "flash-state" (match))
 
 ;;; Core Functions
+
+(defun flash-isearch--cancel-update-timer ()
+  "Cancel pending debounced isearch update timer."
+  (when (timerp flash-isearch--update-timer)
+    (cancel-timer flash-isearch--update-timer)
+    (setq flash-isearch--update-timer nil)))
 
 (defun flash-isearch--start ()
   "Start flash search mode.
 Always initializes the session so that `flash-isearch--toggle' works.
 Labels are shown by default only when `flash-isearch-enabled' is non-nil."
+  (flash-isearch--cancel-update-timer)
   (setq flash-isearch--active flash-isearch-enabled)
   (setq flash-isearch--in-session t)
   (setq flash-isearch--original-buffer (current-buffer))
@@ -94,6 +126,7 @@ Labels are shown by default only when `flash-isearch-enabled' is non-nil."
 
 (defun flash-isearch--stop ()
   "Stop flash search mode and clean up."
+  (flash-isearch--cancel-update-timer)
   (when flash-isearch--state
     (flash-highlight-clear flash-isearch--state)
     (flash-state-cleanup flash-isearch--state))
@@ -109,25 +142,37 @@ Labels are shown by default only when `flash-isearch-enabled' is non-nil."
              flash-isearch--state)
     (with-current-buffer (or flash-isearch--original-buffer
                              (current-buffer))
-      ;; Clear old overlays first
-      (flash-highlight-clear flash-isearch--state)
       ;; Update pattern, then refresh or clear matches.
       (setf (flash-state-pattern flash-isearch--state) pattern)
-      (if (> (length pattern) 0)
+      (let* ((pattern-len (length pattern))
+             (min-len (max 0 (or flash-min-pattern-length 0)))
+             (active-pattern (and (> pattern-len 0)
+                                  (>= pattern-len min-len))))
+        (if active-pattern
           (progn
             (flash-search flash-isearch--state)
-            ;; Assign labels.
-            (flash-label-matches flash-isearch--state)
+            ;; Assign labels and keep only rendered candidates for speed.
+            (let* ((limit (pcase flash-isearch-label-limit
+                            ('single-char 'single-char)
+                            ('full nil)
+                            ((pred integerp) flash-isearch-label-limit)
+                            (_ 'single-char)))
+                   (render-matches (flash-label-matches flash-isearch--state
+                                                        limit)))
+              (setf (flash-state-matches flash-isearch--state) render-matches))
             ;; Update display.
             (flash-highlight-update flash-isearch--state))
-        ;; Empty pattern should clear labels and stale overlays.
-        (setf (flash-state-matches flash-isearch--state) nil)))))
+          ;; Pattern is empty or too short: clear labels and stale overlays.
+          (setf (flash-state-matches flash-isearch--state) nil)
+          (setf (flash-state-label-index flash-isearch--state) nil)
+          (flash-highlight-clear flash-isearch--state))))))
 
 (defun flash-isearch--toggle ()
   "Toggle flash labels during search."
   (interactive)
   (if flash-isearch--active
       (progn
+        (flash-isearch--cancel-update-timer)
         (when flash-isearch--state
           (flash-highlight-clear-all flash-isearch--state))
         (setq flash-isearch--active nil)
@@ -149,11 +194,9 @@ Labels are shown by default only when `flash-isearch-enabled' is non-nil."
 
 (defun flash-isearch--snapshot-match (match)
   "Return stable jump snapshot for MATCH."
-  (let* ((pos-marker (flash-match-pos match))
-         (end-marker (flash-match-end-pos match))
-         (pos (and (markerp pos-marker) (marker-position pos-marker)))
-         (end-pos (and (markerp end-marker) (marker-position end-marker)))
-         (buffer (and (markerp pos-marker) (marker-buffer pos-marker)))
+  (let* ((pos (flash-match-pos-value match))
+         (end-pos (flash-match-end-pos-value match))
+         (buffer (flash-match-buffer-live match))
          (window (flash-match-window match)))
     (when (and (integerp pos)
                (integerp end-pos)
@@ -180,8 +223,9 @@ Labels are shown by default only when `flash-isearch-enabled' is non-nil."
                    (<= (point-min) end-pos)
                    (<= end-pos (1+ (point-max))))
           (make-flash-match
-           :pos (copy-marker pos)
-           :end-pos (copy-marker end-pos)
+           :pos pos
+           :end-pos end-pos
+           :buffer buffer
            :label nil
            :window (if (window-live-p window) window (selected-window))
            :fold fold))))))
@@ -191,6 +235,22 @@ Labels are shown by default only when `flash-isearch-enabled' is non-nil."
   (when (and (stringp flash-isearch-trigger)
              (= (length flash-isearch-trigger) 1))
     (string-to-char flash-isearch-trigger)))
+
+(defun flash-isearch--char-continues-pattern-p (char pattern buffer)
+  "Return non-nil when CHAR can extend PATTERN somewhere in BUFFER.
+Used to avoid stealing normal search input in no-trigger mode."
+  (when (and (characterp char)
+             (stringp pattern)
+             (buffer-live-p buffer))
+    (let ((candidate (concat pattern (char-to-string char))))
+      (with-current-buffer buffer
+        (let ((case-fold-search
+               (if (boundp 'isearch-case-fold-search)
+                   isearch-case-fold-search
+                 t)))
+          (save-excursion
+            (goto-char (point-min))
+            (search-forward candidate nil t)))))))
 
 (defun flash-isearch--try-jump (char)
   "Try to jump to label CHAR.  Return t if jumped, nil otherwise."
@@ -212,12 +272,15 @@ Labels are shown by default only when `flash-isearch-enabled' is non-nil."
     (let ((snapshot flash-isearch--pending-match))
       (setq flash-isearch--pending-match nil)
       (when-let ((match (flash-isearch--snapshot-to-match snapshot)))
-        (unwind-protect
-            (flash-jump-to-match match)
-          (when (markerp (flash-match-pos match))
-            (set-marker (flash-match-pos match) nil))
-          (when (markerp (flash-match-end-pos match))
-            (set-marker (flash-match-end-pos match) nil)))))))
+        (flash-jump-to-match match)))))
+
+(defun flash-isearch--run-debounced-update (pattern)
+  "Run debounced flash update for isearch PATTERN."
+  (setq flash-isearch--update-timer nil)
+  (when (and flash-isearch--active
+             flash-isearch--state
+             (stringp pattern))
+    (flash-isearch--update pattern)))
 
 ;;; Evil Integration
 
@@ -272,7 +335,16 @@ Without trigger: any label char jumps (only when multiple matches)."
         (setq this-command 'ignore))
        ;; No trigger configured - try jump if label matches
        ((and (null trigger)
-             (flash-state-matches flash-isearch--state))
+             (flash-state-matches flash-isearch--state)
+             (not (flash-isearch--char-continues-pattern-p
+                   last-command-event
+                   (if (minibufferp)
+                       (minibuffer-contents-no-properties)
+                     "")
+                   (or (and (bound-and-true-p evil-ex-original-buffer)
+                            evil-ex-original-buffer)
+                       flash-isearch--original-buffer
+                       (current-buffer)))))
         (when (flash-isearch--try-jump last-command-event)
           (exit-minibuffer)))))))
 
@@ -355,7 +427,16 @@ Without trigger: any label char jumps (only when multiple matches)."
   "Update flash during isearch."
   (when (and flash-isearch--active
              (bound-and-true-p isearch-string))
-    (flash-isearch--update isearch-string)))
+    (if (and (numberp flash-isearch-update-delay)
+             (> flash-isearch-update-delay 0))
+        (progn
+          (flash-isearch--cancel-update-timer)
+          (setq flash-isearch--update-timer
+                (run-with-idle-timer flash-isearch-update-delay
+                                     nil
+                                     #'flash-isearch--run-debounced-update
+                                     isearch-string)))
+      (flash-isearch--update isearch-string))))
 
 (defun flash-isearch--printing-char-advice (orig-fun &rest args)
   "Advice for `isearch-printing-char' to intercept label keys.
@@ -380,7 +461,12 @@ ORIG-FUN is the original function, ARGS are passed through."
           (message "[label?]"))
          ;; No trigger configured - try jump if label matches
          ((and (null trigger)
-               (flash-state-matches flash-isearch--state))
+               (flash-state-matches flash-isearch--state)
+               (not (flash-isearch--char-continues-pattern-p
+                     last-command-event
+                     (or isearch-string "")
+                     (or flash-isearch--original-buffer
+                         (current-buffer)))))
           (if (flash-isearch--try-jump last-command-event)
               (isearch-exit)
             ;; Not a valid label, continue with normal input

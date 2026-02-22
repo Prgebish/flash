@@ -144,6 +144,38 @@
       (flash-label-matches state)
       (should (null (flash-state-matches state))))))
 
+(ert-deftest flash-label-max-matches-limit-test ()
+  "Test that MAX-MATCHES limits labels to nearest candidates."
+  (with-temp-buffer
+    (insert (make-string 40 ?x))
+    (goto-char (point-min))
+    (set-window-buffer (selected-window) (current-buffer))
+    (let* ((flash-labels "abcd")
+           (flash-label-uppercase nil)
+           (flash-multi-char-labels nil)
+           (state (flash-state-create (list (selected-window)))))
+      (setf (flash-state-pattern state) "")
+      (setf (flash-state-start-point state) 10)
+      ;; Matches at positions with unique distances from point 10:
+      ;; 8 (2), 13 (3), 4 (6), 19 (9), 1 (9)
+      (setf (flash-state-matches state)
+            (mapcar (lambda (pos)
+                      (make-flash-match
+                       :pos (copy-marker pos)
+                       :end-pos (copy-marker (1+ pos))
+                       :label nil
+                       :window (selected-window)
+                       :fold nil))
+                    '(1 4 8 13 19)))
+      (flash-label-matches state 3)
+      (let ((labeled-positions
+             (sort (mapcar #'flash-match-pos-value
+                           (cl-remove-if-not #'flash-match-label
+                                             (flash-state-matches state)))
+                   #'<)))
+        (should (equal '(4 8 13) labeled-positions))
+        (should (= 3 (hash-table-count (flash-state-label-index state))))))))
+
 (ert-deftest flash-label-more-matches-than-labels-test ()
   "Test multi-char labels when matches exceed single-char capacity.
 With 2 label chars (a,b), we can generate 4 two-char labels (aa,ab,ba,bb)."

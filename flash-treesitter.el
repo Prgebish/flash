@@ -29,6 +29,8 @@
 (declare-function treesit-buffer-root-node "treesit")
 (declare-function treesit-available-p "treesit")
 (declare-function evil-visual-char "evil-commands")
+(declare-function flash-match-pos-value "flash-state" (match))
+(declare-function flash-match-end-pos-value "flash-state" (match))
 
 (defvar flash-labels)
 (defvar flash-backdrop)
@@ -118,9 +120,9 @@ Returns list of (START END TYPE DEPTH) for each node."
       (push ov (flash-state-overlays state))))
   ;; Show labels only (no underline/highlight for nodes - too noisy)
   (dolist (match (flash-state-matches state))
-    (let* ((start (marker-position (flash-match-pos match)))
+    (let* ((start (flash-match-pos-value match))
            (label (flash-match-label match)))
-      (when label
+      (when (and label (integerp start))
         (let ((ov (make-overlay start (1+ start))))
           (overlay-put ov 'display (propertize label 'face 'flash-label))
           (overlay-put ov 'flash t)
@@ -187,8 +189,10 @@ With evil-mode, enters visual state for the selection."
 (defun flash-treesitter--select-match (match)
   "Select the range of MATCH.
 Uses evil visual mode when evil is loaded, otherwise sets Emacs region."
-  (let ((start (marker-position (flash-match-pos match)))
-        (end (marker-position (flash-match-end-pos match))))
+  (let ((start (flash-match-pos-value match))
+        (end (flash-match-end-pos-value match)))
+    (unless (and (integerp start) (integerp end))
+      (user-error "Invalid treesitter match range"))
     (if (featurep 'evil)
         (progn
           (goto-char start)

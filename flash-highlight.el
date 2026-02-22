@@ -11,6 +11,10 @@
 
 (require 'flash-state)
 
+(declare-function flash-match-pos-value "flash-state" (match))
+(declare-function flash-match-end-pos-value "flash-state" (match))
+(declare-function flash-match-buffer-live "flash-state" (match))
+
 ;;; Faces
 ;; Default faces inherit from theme, rainbow uses hardcoded Tailwind colors
 
@@ -61,31 +65,142 @@ Indices: 0=50, 1=100, 2=200, ..., 9=900, 10=950.")
 
 ;;; Configuration (set by flash.el)
 
-(defvar flash-backdrop)
-(defvar flash-rainbow)
-(defvar flash-rainbow-shade)
-(defvar flash-highlight-matches)
-(defvar flash-label-position)
+(defvar flash-backdrop t)
+(defvar flash-rainbow nil)
+(defvar flash-rainbow-shade 2)
+(defvar flash-highlight-matches t)
+(defvar flash-label-position 'overlay)
 
 ;;; Highlight Functions
 
 (defun flash-highlight-update (state)
   "Update highlighting for STATE.
-Clears match/label overlays and recreates them.
+Reuses existing match/label overlays where possible.
 Backdrop is created once and reused across updates."
-  ;; Remove old match/label overlays (not backdrop)
-  (flash-highlight-clear state)
-
   ;; Ensure backdrop exists (no-op after first call)
   (when flash-backdrop
     (flash--ensure-backdrop state))
 
-  ;; Matches and labels
-  (let ((index 0))
+  ;; Reconcile match/label overlays with current match set.
+  (flash--reconcile-overlays state))
+
+(defun flash--overlay-pools (state)
+  "Return reusable overlay pools from STATE as (MATCHES . LABELS)."
+  (let (match-overlays label-overlays)
+    (dolist (ov (flash-state-overlays state))
+      (if (eq (overlay-get ov 'flash-kind) 'label)
+          (push ov label-overlays)
+        (push ov match-overlays)))
+    (cons (nreverse match-overlays) (nreverse label-overlays))))
+
+(defun flash--reset-overlay-decoration (ov)
+  "Reset display string properties on overlay OV."
+  (overlay-put ov 'before-string nil)
+  (overlay-put ov 'after-string nil)
+  (overlay-put ov 'display nil))
+
+(defun flash--configure-match-overlay (ov buf pos end-pos)
+  "Configure OV as a match overlay in BUF for POS..END-POS."
+  (move-overlay ov pos end-pos buf)
+  (flash--reset-overlay-decoration ov)
+  (overlay-put ov 'face 'flash-match)
+  (overlay-put ov 'flash t)
+  (overlay-put ov 'flash-kind 'match)
+  (overlay-put ov 'priority 100))
+
+(defun flash--configure-label-overlay (ov state buf pos end-pos label face position)
+  "Configure OV as a label overlay for match and return OV.
+STATE provides current label prefix.
+BUF, POS, END-POS locate the match.
+LABEL, FACE, and POSITION control displayed label."
+  (let* ((prefix (flash-state-label-prefix state))
+         (display-label (if (and prefix (string-prefix-p prefix label))
+                            (substring label (length prefix))
+                          label))
+         (label-str (propertize display-label 'face face))
+         (max-end (1+ (with-current-buffer buf (point-max)))))
+    (with-current-buffer buf
+      (pcase position
+        ('after
+         (move-overlay ov end-pos end-pos buf)
+         (flash--reset-overlay-decoration ov)
+         (overlay-put ov 'after-string label-str))
+        ('before
+         (move-overlay ov pos pos buf)
+         (flash--reset-overlay-decoration ov)
+         (overlay-put ov 'before-string label-str))
+        ('overlay
+         (move-overlay ov pos (min (1+ pos) max-end) buf)
+         (flash--reset-overlay-decoration ov)
+         (overlay-put ov 'display label-str))
+        ('pre-overlay
+         (if (and (> pos (point-min))
+                  (not (eq (char-before pos) ?\n)))
+             (move-overlay ov (1- pos) pos buf)
+           (move-overlay ov pos (min (1+ pos) max-end) buf))
+         (flash--reset-overlay-decoration ov)
+         (overlay-put ov 'display label-str))
+        ('eol
+         (save-excursion
+           (goto-char pos)
+           (let ((eol (line-end-position)))
+             (move-overlay ov eol eol buf)))
+         (flash--reset-overlay-decoration ov)
+         (overlay-put ov 'after-string (concat " " label-str)))
+        (_
+         (move-overlay ov end-pos end-pos buf)
+         (flash--reset-overlay-decoration ov)
+         (overlay-put ov 'after-string label-str))))
+    (overlay-put ov 'face nil)
+    (overlay-put ov 'flash t)
+    (overlay-put ov 'flash-kind 'label)
+    (overlay-put ov 'priority 200)
+    ov))
+
+(defun flash--reconcile-overlays (state)
+  "Update overlays in STATE by reusing existing overlay objects."
+  (let* ((pools (flash--overlay-pools state))
+         (match-pool (car pools))
+         (label-pool (cdr pools))
+         new-overlays
+         (index 0))
     (dolist (match (flash-state-matches state))
-      (flash--highlight-match state match index)
-      (when (flash-match-label match)
-        (setq index (1+ index))))))
+      (let* ((pos (flash-match-pos-value match))
+             (end-pos (flash-match-end-pos-value match))
+             (label (flash-match-label match))
+             (prefix (flash-state-label-prefix state))
+             (fold (flash-match-fold match))
+             (show-label (and label
+                              (or (not prefix)
+                                  (string-prefix-p prefix label))))
+             (face (when show-label (flash--get-label-face index)))
+             (buf (flash-match-buffer-live match)))
+        (when (and (buffer-live-p buf)
+                   (integerp pos)
+                   (integerp end-pos))
+          (with-current-buffer buf
+            (let ((max-end (1+ (point-max))))
+              (setq pos (max (point-min) pos))
+              (setq end-pos (min max-end end-pos))))
+          (unless fold
+            (when (and flash-highlight-matches
+                       (> end-pos pos))
+              (let ((ov (or (pop match-pool)
+                            (make-overlay pos end-pos buf))))
+                (flash--configure-match-overlay ov buf pos end-pos)
+                (push ov new-overlays)))
+            (when show-label
+              (let ((ov (or (pop label-pool)
+                            (make-overlay pos pos buf))))
+                (flash--configure-label-overlay
+                 ov state buf pos end-pos label face flash-label-position)
+                (push ov new-overlays)))))
+        (when label
+          (setq index (1+ index)))))
+    ;; Delete overlays no longer needed.
+    (mapc #'delete-overlay match-pool)
+    (mapc #'delete-overlay label-pool)
+    (setf (flash-state-overlays state) (nreverse new-overlays))))
 
 (defun flash-highlight-clear (state)
   "Remove match/label overlays from STATE.
@@ -100,97 +215,39 @@ Backdrop overlays are preserved for reuse."
   (setf (flash-state-backdrop-overlays state) nil))
 
 (defun flash--ensure-backdrop (state)
-  "Ensure backdrop overlays exist in STATE.
-Creates them on first call; no-op on subsequent calls."
-  (unless (flash-state-backdrop-overlays state)
+  "Ensure backdrop overlays in STATE track the current window view.
+Existing overlays are reused and moved to current `window-start' / `window-end'."
+  (let ((existing (make-hash-table :test 'eq))
+        new-overlays)
+    ;; Index existing overlays by source window and drop invalid ones.
+    (dolist (ov (flash-state-backdrop-overlays state))
+      (let ((win (overlay-get ov 'flash-window)))
+        (if (and (overlay-buffer ov)
+                 (window-live-p win))
+            (puthash win ov existing)
+          (delete-overlay ov))))
+    ;; Ensure one backdrop overlay per live window and move it to current range.
     (dolist (win (flash-state-windows state))
       (when (window-live-p win)
-        (with-current-buffer (window-buffer win)
-          (let ((ov (make-overlay (window-start win) (window-end win t))))
-            (overlay-put ov 'face 'flash-backdrop)
-            (overlay-put ov 'flash t)
-            (overlay-put ov 'priority 0)
-            (push ov (flash-state-backdrop-overlays state))))))))
-
-(defun flash--highlight-match (state match index)
-  "Add overlays for MATCH to STATE.
-INDEX is used to select rainbow color when `flash-rainbow' is enabled."
-  (let* ((pos (flash-match-pos match))
-         (end-pos (flash-match-end-pos match))
-         (label (flash-match-label match))
-         (prefix (flash-state-label-prefix state))
-         (fold (flash-match-fold match))
-         ;; Skip labels that don't match current prefix
-         (show-label (and label
-                          (or (not prefix)
-                              (string-prefix-p prefix label))))
-         (face (when show-label (flash--get-label-face index)))
-         (buf (marker-buffer pos))
-         (position flash-label-position))
-    (when buf
-      (with-current-buffer buf
-        (cond
-         ;; Folded: no highlighting (match is invisible)
-         (fold nil)
-         ;; Normal: underline match and show label
-         (t
-          (when flash-highlight-matches
-            (let ((ov (make-overlay pos end-pos)))
-              (overlay-put ov 'face 'flash-match)
-              (overlay-put ov 'flash t)
-              (overlay-put ov 'priority 100)
-              (push ov (flash-state-overlays state))))
-          (when show-label
-            (flash--add-label-overlay state pos end-pos label face position))))))))
-
-(defun flash--add-label-overlay (state pos end-pos label face position)
-  "Add label overlay to STATE at appropriate position.
-POS is match start, END-POS is match end, LABEL is the label string,
-FACE is the label face, POSITION is where to place the label."
-  (let* ((prefix (flash-state-label-prefix state))
-         ;; Show remaining part of label after prefix
-         (display-label (if (and prefix (string-prefix-p prefix label))
-                            (substring label (length prefix))
-                          label))
-         (label-str (propertize display-label 'face face))
-         ov)
-    (pcase position
-      ('after
-       ;; Label after match (default)
-       (setq ov (make-overlay end-pos end-pos))
-       (overlay-put ov 'after-string label-str))
-      ('before
-       ;; Label before match
-       (setq ov (make-overlay pos pos))
-       (overlay-put ov 'before-string label-str))
-      ('overlay
-       ;; Label replaces first character
-       (setq ov (make-overlay pos (1+ pos)))
-       (overlay-put ov 'display label-str))
-      ('pre-overlay
-       ;; Label replaces character before match; fallback to overlay
-       (if (and (> pos (point-min))
-                (not (eq (char-before pos) ?\n)))
-           (progn
-             (setq ov (make-overlay (1- pos) pos))
-             (overlay-put ov 'display label-str))
-         (setq ov (make-overlay pos (1+ pos)))
-         (overlay-put ov 'display label-str)))
-      ('eol
-       ;; Label at end of line
-       (save-excursion
-         (goto-char pos)
-         (let ((eol (line-end-position)))
-           (setq ov (make-overlay eol eol))
-           (overlay-put ov 'after-string
-                        (concat " " label-str)))))
-      (_
-       ;; Fallback to after
-       (setq ov (make-overlay end-pos end-pos))
-       (overlay-put ov 'after-string label-str)))
-    (overlay-put ov 'flash t)
-    (overlay-put ov 'priority 200)
-    (push ov (flash-state-overlays state))))
+        (let* ((buf (window-buffer win))
+               (start (window-start win))
+               (end (window-end win t))
+               (ov (or (gethash win existing)
+                       (make-overlay start end buf))))
+          (move-overlay ov start end buf)
+          (overlay-put ov 'face 'flash-backdrop)
+          (overlay-put ov 'flash t)
+          (overlay-put ov 'flash-kind 'backdrop)
+          (overlay-put ov 'flash-window win)
+          (overlay-put ov 'priority 0)
+          (push ov new-overlays)
+          (remhash win existing))))
+    ;; Drop leftover overlays for windows no longer in scope.
+    (maphash (lambda (_win ov)
+               (delete-overlay ov))
+             existing)
+    (setf (flash-state-backdrop-overlays state)
+          (nreverse new-overlays))))
 
 (defun flash--rainbow-face (index)
   "Compute face plist for rainbow label at INDEX.

@@ -125,12 +125,13 @@
             ;; Should find matches in both buffers (2 in buf1, 1 in buf2)
             (should (= 3 (length (flash-state-matches state))))
 
-            ;; Check that markers point to correct buffers
+            ;; Check that matches point to correct buffers
             (dolist (match (flash-state-matches state))
-              (let ((marker (flash-match-pos match))
+              (let ((pos (flash-match-pos-value match))
+                    (buf (flash-match-buffer-live match))
                     (win (flash-match-window match)))
-                (should (markerp marker))
-                (should (eq (marker-buffer marker) (window-buffer win)))))))
+                (should (integerp pos))
+                (should (eq buf (window-buffer win)))))))
 
       ;; Cleanup
       (delete-window win2)

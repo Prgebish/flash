@@ -59,6 +59,7 @@ One of `find', `find-to', `find-backward', or `find-to-backward'.")
 (defvar evil-motion-state-map)
 (defvar flash-labels)  ; defined in flash.el
 (declare-function evil-define-motion "evil-macros")
+(declare-function flash-match-pos-value "flash-state" (match))
 
 ;;; Helper Functions
 
@@ -131,11 +132,11 @@ Returns t if jump was made, nil if cancelled."
             (setq jumped nil))
            ;; Label selected
            (t
-            (when-let ((match (cl-find (char-to-string char)
-                                       (flash-state-matches state)
-                                       :key #'flash-match-label
-                                       :test #'equal)))
-              (goto-char (marker-position (flash-match-pos match)))
+             (when-let ((match (cl-find (char-to-string char)
+                                        (flash-state-matches state)
+                                        :key #'flash-match-label
+                                        :test #'equal)))
+              (goto-char (flash-match-pos-value match))
               (when adjust-fn (funcall adjust-fn))
               (setq jumped t)))))
       ;; Cleanup
@@ -165,7 +166,7 @@ ADJUST-FN is called on final position for t/T motions."
                                        (flash-state-matches state)
                                        :key #'flash-match-label
                                        :test #'equal)))
-              (goto-char (marker-position (flash-match-pos match)))
+              (goto-char (flash-match-pos-value match))
               (when adjust-fn (funcall adjust-fn))
               t))
            ;; Not a label - put char back for next command

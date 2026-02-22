@@ -11,6 +11,7 @@
 
 ;; Variables dynamically bound in tests.
 (defvar flash-backdrop)
+(defvar flash-highlight-matches)
 (defvar flash-label-position)
 (defvar flash-rainbow)
 (defvar flash-rainbow-shade)
@@ -375,6 +376,29 @@ Default shade 5: bg from shade-500, fg from shade-950."
         ;; Second update should reuse same overlay objects
         (flash-highlight-update state)
         (should (equal backdrop-1 (flash-state-backdrop-overlays state)))))))
+
+(ert-deftest flash-highlight-backdrop-follows-scroll-test ()
+  "Test that backdrop overlay range follows window scrolling."
+  (with-temp-buffer
+    (dotimes (i 200)
+      (insert (format "line %03d foo bar baz\n" i)))
+    (goto-char (point-min))
+    (set-window-buffer (selected-window) (current-buffer))
+    (let ((state (flash-state-create (list (selected-window))))
+          (flash-backdrop t))
+      (flash-highlight-update state)
+      (let* ((ov1 (car (flash-state-backdrop-overlays state)))
+             (start1 (overlay-start ov1)))
+        (goto-char (point-min))
+        (forward-line 80)
+        (set-window-start (selected-window) (point) t)
+        (redisplay)
+        (flash-highlight-update state)
+        (let* ((ov2 (car (flash-state-backdrop-overlays state)))
+               (start2 (overlay-start ov2)))
+          (should (eq ov1 ov2))
+          (should (/= start1 start2))
+          (should (= start2 (window-start (selected-window)))))))))
 
 (ert-deftest flash-highlight-clear-all-test ()
   "Test that clear-all removes both match/label and backdrop overlays."

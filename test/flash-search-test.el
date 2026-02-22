@@ -31,8 +31,9 @@
       (should (= 3 (length (flash-state-matches state))))
       ;; Check first match
       (let ((first-match (car (flash-state-matches state))))
-        (should (= 1 (marker-position (flash-match-pos first-match))))
-        (should (= 4 (marker-position (flash-match-end-pos first-match))))
+        (should (= 1 (flash-match-pos-value first-match)))
+        (should (= 4 (flash-match-end-pos-value first-match)))
+        (should (eq (current-buffer) (flash-match-buffer first-match)))
         (should (eq (selected-window) (flash-match-window first-match)))))))
 
 (ert-deftest flash-search-case-insensitive-test ()
@@ -57,8 +58,8 @@
       (flash-search state)
       (should (null (flash-state-matches state))))))
 
-(ert-deftest flash-search-markers-test ()
-  "Test that matches use markers."
+(ert-deftest flash-search-position-storage-test ()
+  "Test that matches use lightweight numeric positions."
   (with-temp-buffer
     (insert "test")
     (goto-char (point-min))
@@ -67,8 +68,9 @@
       (setf (flash-state-pattern state) "test")
       (flash-search state)
       (let ((match (car (flash-state-matches state))))
-        (should (markerp (flash-match-pos match)))
-        (should (markerp (flash-match-end-pos match)))))))
+        (should (integerp (flash-match-pos match)))
+        (should (integerp (flash-match-end-pos match)))
+        (should (eq (current-buffer) (flash-match-buffer-live match)))))))
 
 (ert-deftest flash-search-skips-dead-window-test ()
   "Test search skips windows that were deleted during a flash session."

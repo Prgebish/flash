@@ -6,6 +6,7 @@
 ;;; Code:
 
 (require 'ert)
+(require 'cl-lib)
 (require 'flash)
 (require 'flash-isearch)
 
@@ -138,7 +139,7 @@
       (let* ((matches (flash-state-matches flash-isearch--state))
              (second-match (nth 1 matches))
              (label (flash-match-label second-match))
-             (expected-pos (marker-position (flash-match-pos second-match))))
+             (expected-pos (flash-match-pos-value second-match)))
         (when label
           ;; Try jump (sets pending match) - pass char, not string
           (flash-isearch--try-jump (string-to-char label))
@@ -179,6 +180,14 @@
   (should (boundp 'flash-isearch-trigger))
   (should (null flash-isearch-trigger)))
 
+(ert-deftest flash-isearch-defcustom-update-delay-test ()
+  "Test that update-delay defcustom exists."
+  (should (boundp 'flash-isearch-update-delay)))
+
+(ert-deftest flash-isearch-defcustom-label-limit-test ()
+  "Test that label-limit defcustom exists."
+  (should (boundp 'flash-isearch-label-limit)))
+
 (ert-deftest flash-isearch-trigger-char-validation-test ()
   "Test trigger conversion only accepts one-character strings."
   (let ((flash-isearch-trigger ""))
@@ -193,6 +202,103 @@
 (ert-deftest flash-isearch-mode-exists-test ()
   "Test that the minor mode exists."
   (should (fboundp 'flash-isearch-mode)))
+
+(ert-deftest flash-isearch-isearch-update-debounce-test ()
+  "Test that isearch updates can be debounced."
+  (with-temp-buffer
+    (insert "foo bar foo")
+    (set-window-buffer (selected-window) (current-buffer))
+    (let ((flash-isearch-enabled t)
+          (flash-isearch-update-delay 0.05)
+          (isearch-string "foo"))
+      (flash-isearch--start)
+      (flash-isearch--isearch-update)
+      (should (timerp flash-isearch--update-timer))
+      ;; Run pending update directly to avoid timing-based test flakiness.
+      (flash-isearch--run-debounced-update isearch-string)
+      (should (= 2 (length (flash-state-matches flash-isearch--state))))
+      (flash-isearch--stop))))
+
+(ert-deftest flash-isearch-isearch-update-no-debounce-test ()
+  "Test that zero delay disables debounce and updates immediately."
+  (with-temp-buffer
+    (insert "foo bar foo")
+    (set-window-buffer (selected-window) (current-buffer))
+    (let ((flash-isearch-enabled t)
+          (flash-isearch-update-delay 0)
+          (isearch-string "foo"))
+      (flash-isearch--start)
+      (flash-isearch--isearch-update)
+      (should (= 2 (length (flash-state-matches flash-isearch--state))))
+      (should-not (timerp flash-isearch--update-timer))
+      (flash-isearch--stop))))
+
+(ert-deftest flash-isearch-single-char-label-limit-test ()
+  "Test that `single-char' limit keeps only one-char label candidates."
+  (with-temp-buffer
+    (insert (mapconcat (lambda (_n) "x") (number-sequence 1 20) " "))
+    (goto-char (point-min))
+    (set-window-buffer (selected-window) (current-buffer))
+    (let ((flash-isearch-enabled t)
+          (flash-isearch-label-limit 'single-char)
+          (flash-labels "ab")
+          (flash-label-uppercase nil)
+          (flash-multi-char-labels t))
+      (flash-isearch--start)
+      (flash-isearch--update "x")
+      (should (= 2 (length (flash-state-matches flash-isearch--state))))
+      (should (cl-every #'flash-match-label
+                        (flash-state-matches flash-isearch--state)))
+      (should (= 2 (hash-table-count
+                    (flash-state-label-index flash-isearch--state))))
+      (flash-isearch--stop))))
+
+(ert-deftest flash-isearch-char-continues-pattern-test ()
+  "Test detection of offscreen pattern continuation in current buffer."
+  (with-temp-buffer
+    (dotimes (_ 200)
+      (insert "f\n"))
+    (insert "flash\n")
+    (let ((isearch-case-fold-search t))
+      (should (flash-isearch--char-continues-pattern-p
+               ?l "f" (current-buffer)))
+      (should-not (flash-isearch--char-continues-pattern-p
+                   ?z "f" (current-buffer))))))
+
+(ert-deftest flash-isearch-no-trigger-allows-continuation-input-test ()
+  "Test no-trigger mode does not steal chars that continue search pattern."
+  (with-temp-buffer
+    (insert "fff\n")
+    (insert (make-string 300 ?x))
+    (insert "\nflash\n")
+    (goto-char (point-min))
+    (set-window-buffer (selected-window) (current-buffer))
+    (let ((flash-isearch-enabled t)
+          (flash-isearch-trigger nil)
+          (isearch-mode t)
+          (isearch-string "f")
+          (orig-called nil))
+      (flash-isearch--start)
+      ;; Inject a jumpable label to ensure advice would jump without
+      ;; continuation guard.
+      (let* ((match (make-flash-match
+                     :pos (point-min)
+                     :end-pos (1+ (point-min))
+                     :buffer (current-buffer)
+                     :label "l"
+                     :window (selected-window)
+                     :fold nil))
+             (index (make-hash-table :test 'equal)))
+        (puthash "l" match index)
+        (setf (flash-state-matches flash-isearch--state) (list match))
+        (setf (flash-state-label-index flash-isearch--state) index))
+      (let ((last-command-event ?l))
+        (flash-isearch--printing-char-advice
+         (lambda (&rest _args)
+           (setq orig-called t))))
+      (should orig-called)
+      (should flash-isearch--active)
+      (flash-isearch--stop))))
 
 (provide 'flash-isearch-test)
 ;;; flash-isearch-test.el ends here

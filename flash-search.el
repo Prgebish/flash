@@ -11,17 +11,11 @@
 
 (require 'flash-state)
 
-(defvar flash-case-fold)
+(defvar flash-case-fold t)
 
 (defun flash-search (state)
   "Find all matches for STATE pattern in all windows.
 Updates STATE matches field with found matches."
-  ;; Release markers from old matches before creating new ones
-  (dolist (m (flash-state-matches state))
-    (when (markerp (flash-match-pos m))
-      (set-marker (flash-match-pos m) nil))
-    (when (markerp (flash-match-end-pos m))
-      (set-marker (flash-match-end-pos m) nil)))
   (let ((pattern (flash-state-pattern state))
         (windows (flash-state-windows state))
         (case-fold-search flash-case-fold)
@@ -44,13 +38,16 @@ Updates STATE matches field with found matches."
                       (let ((end-pos (match-end 0))
                             (fold (flash--get-fold-at pos)))
                         (push (make-flash-match
-                               :pos (copy-marker pos)
-                               :end-pos (copy-marker end-pos)
+                               :pos pos
+                               :end-pos end-pos
+                               :buffer buf
                                :label nil
                                :window win
                                :fold fold)
                               matches)))))))))))
-    (setf (flash-state-matches state) (nreverse matches))))
+    (setf (flash-state-matches state) (nreverse matches))
+    ;; Labels are invalidated after each search and rebuilt separately.
+    (setf (flash-state-label-index state) nil)))
 
 (defun flash--get-fold-at (pos)
   "Return fold line start for POS if it is hidden, otherwise nil.

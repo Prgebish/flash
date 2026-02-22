@@ -12,6 +12,10 @@
 (require 'flash-state)
 (require 'flash-label)
 
+(declare-function flash-match-pos-value "flash-state" (match))
+(declare-function flash-match-end-pos-value "flash-state" (match))
+(declare-function flash-match-buffer-live "flash-state" (match))
+
 ;;; Configuration (set by flash.el)
 
 (defvar flash-jump-position)
@@ -32,11 +36,18 @@ Uses `flash-jump-position' to determine cursor placement.
 Saves to jumplist if `flash-jumplist' is non-nil.
 Clears highlighting if `flash-nohlsearch' is non-nil."
   (when match
-    (let ((win (flash-match-window match))
-          (pos (flash-match-pos match))
-          (end-pos (flash-match-end-pos match))
+    (let* ((win (flash-match-window match))
+           (buf (flash-match-buffer-live match))
+           (target-window (cond
+                           ((window-live-p win) win)
+                           ((and (buffer-live-p buf)
+                                 (get-buffer-window buf t)))
+                           (t (selected-window))))
+          (pos (flash-match-pos-value match))
+          (end-pos (flash-match-end-pos-value match))
           (fold (flash-match-fold match))
-          (jump-pos flash-jump-position))
+          (jump-pos flash-jump-position)
+          (target-pos (if (eq jump-pos 'end) end-pos pos)))
       ;; Save to jumplist before jumping.
       ;; Skip when region is active: push-mark overwrites the selection
       ;; anchor (mark).  Covers both vanilla Emacs (transient-mark-mode)
@@ -47,11 +58,18 @@ Clears highlighting if `flash-nohlsearch' is non-nil."
                            (eq evil-state 'visual))))
         (push-mark nil t))
       ;; Switch window if needed
-      (unless (eq win (selected-window))
-        (select-window win))
-      ;; Jump to position based on setting
-      (goto-char (marker-position
-                  (if (eq jump-pos 'end) end-pos pos)))
+      (unless (eq target-window (selected-window))
+        (select-window target-window))
+      ;; Ensure the target window shows the match buffer when possible.
+      (when (and (buffer-live-p buf)
+                 (not (eq (window-buffer target-window) buf))
+                 (not (window-dedicated-p target-window)))
+        (set-window-buffer target-window buf))
+      ;; Jump to position based on setting.
+      (when (and (integerp target-pos)
+                 (<= (point-min) target-pos)
+                 (<= target-pos (point-max)))
+        (goto-char target-pos))
       ;; Unfold if in fold
       (when fold
         (flash--unfold-at-point))
