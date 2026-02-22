@@ -90,9 +90,6 @@ Labels are shown by default only when `flash-isearch-enabled' is non-nil."
                 (if (bound-and-true-p flash-multi-window)
                     (window-list nil 'no-minibuf)
                   (list (selected-window))))))
-    ;; Search integration: check label conflicts in whole buffer
-    ;; because search can jump to matches anywhere, not just visible area
-    (setf (flash-state-whole-buffer state) t)
     (setq flash-isearch--state state)))
 
 (defun flash-isearch--stop ()
@@ -132,7 +129,7 @@ Labels are shown by default only when `flash-isearch-enabled' is non-nil."
   (if flash-isearch--active
       (progn
         (when flash-isearch--state
-          (flash-highlight-clear flash-isearch--state))
+          (flash-highlight-clear-all flash-isearch--state))
         (setq flash-isearch--active nil)
         (message "Flash labels: OFF"))
     (setq flash-isearch--active t)

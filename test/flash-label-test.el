@@ -7,6 +7,7 @@
 
 (require 'ert)
 (require 'flash-state)
+(require 'flash-search)
 (require 'flash-label)
 
 (ert-deftest flash-label-assigns-labels-test ()
@@ -82,6 +83,8 @@
     (set-window-buffer (selected-window) (current-buffer))
     (let ((state (flash-state-create (list (selected-window)))))
       (setf (flash-state-pattern state) "ab")
+      ;; Populate matches so continuation-chars can read char-after
+      (flash-search state)
       ;; 'c' and 'd' would conflict (abc, abd exist)
       (let ((labels (flash--available-labels state "ab")))
         ;; 'c' and 'd' should not be in available labels
@@ -227,6 +230,55 @@ With 2 label chars (a,b) and 5 matches, only 2 should get labels."
       (let ((matches (flash-matches-with-label-prefix state "b")))
         (should (= 1 (length matches)))  ; ba only
         (should (equal "ba" (flash-match-label (car matches))))))))
+
+(ert-deftest flash-continuation-chars-from-matches-test ()
+  "Test that continuation chars are collected from match end positions."
+  (with-temp-buffer
+    (insert "ab abc abd")
+    (goto-char (point-min))
+    (set-window-buffer (selected-window) (current-buffer))
+    (let ((flash-case-fold nil)
+          (state (flash-state-create (list (selected-window)))))
+      (setf (flash-state-pattern state) "ab")
+      (flash-search state)
+      (let ((chars (flash--continuation-chars state)))
+        ;; Space after "ab", 'c' after "ab" in "abc", 'd' after "ab" in "abd"
+        (should (gethash ?\s chars))
+        (should (gethash ?c chars))
+        (should (gethash ?d chars))
+        ;; 'a' should not be present
+        (should-not (gethash ?a chars))))))
+
+(ert-deftest flash-continuation-chars-case-fold-test ()
+  "Test that continuation chars respect case folding."
+  (with-temp-buffer
+    (insert "ab ABC")
+    (goto-char (point-min))
+    (set-window-buffer (selected-window) (current-buffer))
+    (let ((flash-case-fold t)
+          (state (flash-state-create (list (selected-window)))))
+      (setf (flash-state-pattern state) "ab")
+      (flash-search state)
+      (let ((chars (flash--continuation-chars state)))
+        ;; With case-fold, 'C' from "ABC" should be stored as 'c'
+        (should (gethash ?c chars))
+        ;; Space after first "ab"
+        (should (gethash ?\s chars))))))
+
+(ert-deftest flash-continuation-chars-end-of-buffer-test ()
+  "Test that matches at end of buffer don't cause errors."
+  (with-temp-buffer
+    (insert "ab")
+    (goto-char (point-min))
+    (set-window-buffer (selected-window) (current-buffer))
+    (let ((flash-case-fold nil)
+          (state (flash-state-create (list (selected-window)))))
+      (setf (flash-state-pattern state) "ab")
+      (flash-search state)
+      ;; Should not error; match at EOB has no continuation char
+      (let ((chars (flash--continuation-chars state)))
+        (should (hash-table-p chars))
+        (should (= 0 (hash-table-count chars)))))))
 
 (provide 'flash-label-test)
 ;;; flash-label-test.el ends here

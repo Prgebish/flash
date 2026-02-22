@@ -24,20 +24,6 @@
       ;; Cleanup
       (flash-isearch--stop))))
 
-(ert-deftest flash-isearch-whole-buffer-test ()
-  "Test that search integration uses whole-buffer for label conflicts.
-During search, matches can be anywhere in buffer (not just visible),
-so label conflict detection must check entire buffer."
-  (with-temp-buffer
-    (insert "hello world")
-    (set-window-buffer (selected-window) (current-buffer))
-    (let ((flash-isearch-enabled t))
-      (flash-isearch--start)
-      ;; whole-buffer should be t for search integration
-      (should (flash-state-whole-buffer flash-isearch--state))
-      ;; Cleanup
-      (flash-isearch--stop))))
-
 (ert-deftest flash-isearch-stop-test ()
   "Test that stop cleans up properly."
   (with-temp-buffer

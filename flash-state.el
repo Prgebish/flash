@@ -23,7 +23,7 @@
   (start-window nil)    ; original window
   (start-point nil)     ; original point position
   (label-prefix nil)    ; current label prefix for multi-char labels
-  (whole-buffer nil))   ; when t, check label conflicts in whole buffer (for search integration)
+  (backdrop-overlays nil)) ; backdrop overlays (reused across updates)
 
 (cl-defstruct flash-match
   "A single search match."
@@ -49,9 +49,11 @@ If nil, uses current window only."
    :start-point (point)))
 
 (defun flash-state-cleanup (state)
-  "Clean up STATE: delete overlays and release markers."
+  "Clean up STATE: delete overlays (including backdrop) and release markers."
   (mapc #'delete-overlay (flash-state-overlays state))
   (setf (flash-state-overlays state) nil)
+  (mapc #'delete-overlay (flash-state-backdrop-overlays state))
+  (setf (flash-state-backdrop-overlays state) nil)
   (dolist (m (flash-state-matches state))
     (when (markerp (flash-match-pos m))
       (set-marker (flash-match-pos m) nil))

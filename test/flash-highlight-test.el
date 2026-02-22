@@ -64,10 +64,10 @@
           (flash-backdrop t))
       (setf (flash-state-matches state) nil)
       (flash-highlight-update state)
-      ;; Should have backdrop overlay
-      (should (>= (length (flash-state-overlays state)) 1))
+      ;; Backdrop should be in backdrop-overlays, not overlays
+      (should (>= (length (flash-state-backdrop-overlays state)) 1))
       ;; Check it has backdrop face
-      (let ((ov (car (flash-state-overlays state))))
+      (let ((ov (car (flash-state-backdrop-overlays state))))
         (should (eq 'flash-backdrop (overlay-get ov 'face)))))))
 
 (ert-deftest flash-highlight-no-backdrop-test ()
@@ -80,8 +80,9 @@
           (flash-backdrop nil))
       (setf (flash-state-matches state) nil)
       (flash-highlight-update state)
-      ;; Should have no overlays
-      (should (null (flash-state-overlays state))))))
+      ;; Should have no overlays at all
+      (should (null (flash-state-overlays state)))
+      (should (null (flash-state-backdrop-overlays state))))))
 
 (ert-deftest flash-highlight-label-test ()
   "Test that label is displayed as after-string (default position)."
@@ -357,6 +358,47 @@ Default shade 5: bg from shade-500, fg from shade-950."
 (ert-deftest flash-highlight-label-position-defcustom-test ()
   "Test that label-position defcustom exists."
   (should (boundp 'flash-label-position)))
+
+(ert-deftest flash-highlight-backdrop-reuse-test ()
+  "Test that backdrop overlays are reused across updates."
+  (with-temp-buffer
+    (insert "foo bar foo")
+    (goto-char (point-min))
+    (set-window-buffer (selected-window) (current-buffer))
+    (let ((state (flash-state-create (list (selected-window))))
+          (flash-backdrop t))
+      (setf (flash-state-matches state) nil)
+      ;; First update creates backdrop
+      (flash-highlight-update state)
+      (let ((backdrop-1 (copy-sequence (flash-state-backdrop-overlays state))))
+        (should (>= (length backdrop-1) 1))
+        ;; Second update should reuse same overlay objects
+        (flash-highlight-update state)
+        (should (equal backdrop-1 (flash-state-backdrop-overlays state)))))))
+
+(ert-deftest flash-highlight-clear-all-test ()
+  "Test that clear-all removes both match/label and backdrop overlays."
+  (with-temp-buffer
+    (insert "foo bar foo")
+    (goto-char (point-min))
+    (set-window-buffer (selected-window) (current-buffer))
+    (let ((state (flash-state-create (list (selected-window))))
+          (flash-backdrop t))
+      (setf (flash-state-matches state)
+            (list (make-flash-match
+                   :pos (copy-marker 1)
+                   :end-pos (copy-marker 4)
+                   :label "a"
+                   :window (selected-window)
+                   :fold nil)))
+      (flash-highlight-update state)
+      ;; Should have both types of overlays
+      (should (>= (length (flash-state-overlays state)) 1))
+      (should (>= (length (flash-state-backdrop-overlays state)) 1))
+      ;; Clear all
+      (flash-highlight-clear-all state)
+      (should (null (flash-state-overlays state)))
+      (should (null (flash-state-backdrop-overlays state))))))
 
 (provide 'flash-highlight-test)
 ;;; flash-highlight-test.el ends here

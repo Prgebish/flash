@@ -67,9 +67,26 @@ When `flash-multi-char-labels' is nil, excess matches remain unlabeled."
         ;; Multi-char disabled - only use available single chars
         (mapcar #'char-to-string chars)))))
 
+(defun flash--continuation-chars (state)
+  "Collect characters that could continue the current search pattern.
+Returns a hash table of characters.  When `flash-case-fold' is non-nil,
+stores downcased characters.
+Reads char-after end-pos of each existing match."
+  (let ((chars (make-hash-table :test 'eq)))
+    (dolist (match (flash-state-matches state))
+      (let ((end (flash-match-end-pos match)))
+        (when (and (markerp end) (marker-buffer end))
+          (with-current-buffer (marker-buffer end)
+            (when (< (marker-position end) (point-max))
+              (let ((c (char-after end)))
+                (when c
+                  (puthash (if flash-case-fold (downcase c) c)
+                           t chars))))))))
+    chars))
+
 (defun flash--available-labels (state pattern)
   "Return labels that won't conflict with PATTERN continuation.
-STATE is used to check for conflicts in all search windows.
+STATE is used to collect continuation characters from matches.
 When `flash-label-uppercase' is non-nil, includes uppercase versions."
   (let* ((base-chars (string-to-list flash-labels))
          (chars (if flash-label-uppercase
@@ -84,37 +101,16 @@ When `flash-label-uppercase' is non-nil, includes uppercase versions."
                   base-chars)))
     (if (string-empty-p pattern)
         chars
-      ;; Skip labels that could continue the pattern
-      (cl-remove-if
-       (lambda (char)
-         (flash--label-conflicts-p state pattern char))
-       chars))))
-
-(defun flash--label-conflicts-p (state pattern char)
-  "Return non-nil if CHAR would continue PATTERN to a real match.
-STATE provides the windows to search in and search scope.
-When `flash-state-whole-buffer' is non-nil, searches entire buffers
-\(for search integration where matches can be anywhere).
-Otherwise only searches visible portions of windows.
-When `flash-label-uppercase' is enabled, uppercase CHAR never conflicts
-because user input is distinguished by case: lowercase continues search,
-uppercase selects label."
-  ;; Uppercase labels don't conflict when uppercase mode is enabled
-  (when (or (not flash-label-uppercase)
-            (not (and (>= char ?A) (<= char ?Z))))
-    (let ((extended (concat pattern (char-to-string char)))
-          (whole-buffer (flash-state-whole-buffer state)))
-      (cl-some
-       (lambda (win)
-         (when (window-live-p win)
-           (with-current-buffer (window-buffer win)
-             (save-excursion
-               (goto-char (if whole-buffer (point-min) (window-start win)))
-               (let ((case-fold-search flash-case-fold))
-                 (search-forward extended
-                                 (unless whole-buffer (window-end win t))
-                                 t))))))
-       (flash-state-windows state)))))
+      ;; Build continuation hash once, filter with O(1) lookups
+      (let ((cont-chars (flash--continuation-chars state)))
+        (cl-remove-if
+         (lambda (char)
+           ;; Uppercase labels never conflict when uppercase mode is enabled
+           (unless (and flash-label-uppercase
+                        (>= char ?A) (<= char ?Z))
+             (gethash (if flash-case-fold (downcase char) char)
+                      cont-chars)))
+         chars)))))
 
 (defun flash--sort-by-distance (state matches)
   "Sort MATCHES by distance from cursor position.

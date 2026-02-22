@@ -71,13 +71,14 @@ Indices: 0=50, 1=100, 2=200, ..., 9=900, 10=950.")
 
 (defun flash-highlight-update (state)
   "Update highlighting for STATE.
-Clears old overlays and creates new ones for backdrop, matches, and labels."
-  ;; Remove old overlays
+Clears match/label overlays and recreates them.
+Backdrop is created once and reused across updates."
+  ;; Remove old match/label overlays (not backdrop)
   (flash-highlight-clear state)
 
-  ;; Backdrop
+  ;; Ensure backdrop exists (no-op after first call)
   (when flash-backdrop
-    (flash--highlight-backdrop state))
+    (flash--ensure-backdrop state))
 
   ;; Matches and labels
   (let ((index 0))
@@ -87,20 +88,29 @@ Clears old overlays and creates new ones for backdrop, matches, and labels."
         (setq index (1+ index))))))
 
 (defun flash-highlight-clear (state)
-  "Remove all overlays from STATE."
+  "Remove match/label overlays from STATE.
+Backdrop overlays are preserved for reuse."
   (mapc #'delete-overlay (flash-state-overlays state))
   (setf (flash-state-overlays state) nil))
 
-(defun flash--highlight-backdrop (state)
-  "Add backdrop overlay to all windows in STATE."
-  (dolist (win (flash-state-windows state))
-    (when (window-live-p win)
-      (with-current-buffer (window-buffer win)
-        (let ((ov (make-overlay (window-start win) (window-end win t))))
-          (overlay-put ov 'face 'flash-backdrop)
-          (overlay-put ov 'flash t)
-          (overlay-put ov 'priority 0)
-          (push ov (flash-state-overlays state)))))))
+(defun flash-highlight-clear-all (state)
+  "Remove all overlays from STATE, including backdrop."
+  (flash-highlight-clear state)
+  (mapc #'delete-overlay (flash-state-backdrop-overlays state))
+  (setf (flash-state-backdrop-overlays state) nil))
+
+(defun flash--ensure-backdrop (state)
+  "Ensure backdrop overlays exist in STATE.
+Creates them on first call; no-op on subsequent calls."
+  (unless (flash-state-backdrop-overlays state)
+    (dolist (win (flash-state-windows state))
+      (when (window-live-p win)
+        (with-current-buffer (window-buffer win)
+          (let ((ov (make-overlay (window-start win) (window-end win t))))
+            (overlay-put ov 'face 'flash-backdrop)
+            (overlay-put ov 'flash t)
+            (overlay-put ov 'priority 0)
+            (push ov (flash-state-backdrop-overlays state))))))))
 
 (defun flash--highlight-match (state match index)
   "Add overlays for MATCH to STATE.

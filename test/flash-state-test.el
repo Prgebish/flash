@@ -69,5 +69,21 @@
                 :fold 10)))
     (should (= 10 (flash-match-fold match)))))
 
+(ert-deftest flash-state-cleanup-backdrop-test ()
+  "Test that cleanup also deletes backdrop overlays."
+  (let ((state (flash-state-create)))
+    (let ((ov1 (make-overlay (point-min) (point-min)))
+          (ov2 (make-overlay (point-min) (point-min))))
+      (setf (flash-state-backdrop-overlays state) (list ov1 ov2))
+      ;; Verify overlays exist
+      (should (overlay-buffer ov1))
+      (should (overlay-buffer ov2))
+      ;; Cleanup
+      (flash-state-cleanup state)
+      ;; Verify backdrop overlays are deleted
+      (should-not (overlay-buffer ov1))
+      (should-not (overlay-buffer ov2))
+      (should (null (flash-state-backdrop-overlays state))))))
+
 (provide 'flash-state-test)
 ;;; flash-state-test.el ends here
