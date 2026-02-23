@@ -312,5 +312,50 @@ With 2 label chars (a,b) and 5 matches, only 2 should get labels."
         (should (hash-table-p chars))
         (should (= 0 (hash-table-count chars)))))))
 
+(ert-deftest flash-label-fold-dedup-test ()
+  "Test that only one label is assigned per fold.
+Matches sharing the same fold value should be deduplicated,
+keeping only the closest match to the cursor."
+  (with-temp-buffer
+    (insert (make-string 40 ?x))
+    (goto-char (point-min))
+    (set-window-buffer (selected-window) (current-buffer))
+    (let* ((flash-labels "abcdef")
+           (flash-label-uppercase nil)
+           (flash-multi-char-labels nil)
+           (state (flash-state-create (list (selected-window)))))
+      (setf (flash-state-pattern state) "")
+      (setf (flash-state-start-point state) 1)
+      ;; Three matches in the same fold (fold = 5), one without fold
+      (setf (flash-state-matches state)
+            (list (make-flash-match
+                   :pos (copy-marker 5) :end-pos (copy-marker 6)
+                   :label nil :window (selected-window) :fold 5)
+                  (make-flash-match
+                   :pos (copy-marker 10) :end-pos (copy-marker 11)
+                   :label nil :window (selected-window) :fold 5)
+                  (make-flash-match
+                   :pos (copy-marker 20) :end-pos (copy-marker 21)
+                   :label nil :window (selected-window) :fold 5)
+                  (make-flash-match
+                   :pos (copy-marker 30) :end-pos (copy-marker 31)
+                   :label nil :window (selected-window) :fold nil)))
+      (flash-label-matches state)
+      ;; Only 2 matches should have labels: closest from fold + non-fold match
+      (let ((labeled (cl-remove-if-not #'flash-match-label
+                                       (flash-state-matches state))))
+        (should (= 2 (length labeled))))
+      ;; The closest fold match (pos 5, dist 4) should have the label
+      (should (flash-match-label
+               (cl-find 5 (flash-state-matches state)
+                        :key (lambda (m) (marker-position (flash-match-pos m))))))
+      ;; The further fold matches should NOT have labels
+      (should-not (flash-match-label
+                   (cl-find 10 (flash-state-matches state)
+                            :key (lambda (m) (marker-position (flash-match-pos m))))))
+      (should-not (flash-match-label
+                   (cl-find 20 (flash-state-matches state)
+                            :key (lambda (m) (marker-position (flash-match-pos m)))))))))
+
 (provide 'flash-label-test)
 ;;; flash-label-test.el ends here

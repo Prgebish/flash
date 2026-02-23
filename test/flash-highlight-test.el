@@ -424,5 +424,62 @@ Default shade 5: bg from shade-500, fg from shade-950."
       (should (null (flash-state-overlays state)))
       (should (null (flash-state-backdrop-overlays state))))))
 
+(ert-deftest flash-highlight-fold-label-test ()
+  "Test that folded matches show labels at end of fold heading line.
+Uses `display' property on the last visible char to survive org-fold."
+  (with-temp-buffer
+    (insert "* Heading\nHidden content with match\n")
+    (goto-char (point-min))
+    (set-window-buffer (selected-window) (current-buffer))
+    (let ((state (flash-state-create (list (selected-window))))
+          (flash-backdrop nil)
+          (flash-highlight-matches t)
+          (flash-label-position 'overlay))
+      ;; Match inside fold: pos is in hidden content, fold points to heading
+      (setf (flash-state-matches state)
+            (list (make-flash-match
+                   :pos (copy-marker 20)
+                   :end-pos (copy-marker 25)
+                   :label "a"
+                   :window (selected-window)
+                   :fold 1)))  ; fold = beginning of heading line
+      (flash-highlight-update state)
+      ;; Should have exactly 1 overlay (label on fold line)
+      (should (= 1 (length (flash-state-overlays state))))
+      (let ((ov (car (flash-state-overlays state))))
+        ;; Overlay should cover the last visible char of fold heading
+        (let* ((eol (save-excursion (goto-char 1) (line-end-position)))
+               (last-vis (if (invisible-p eol) (1- eol) eol)))
+          (should (= last-vis (overlay-start ov)))
+          (should (= (1+ last-vis) (overlay-end ov))))
+        ;; Should have display property with label
+        (let ((disp (overlay-get ov 'display)))
+          (should disp)
+          (should (string-match-p "a" disp)))
+        ;; Should be marked as label kind
+        (should (eq 'label (overlay-get ov 'flash-kind)))))))
+
+(ert-deftest flash-highlight-fold-no-label-test ()
+  "Test that folded matches without labels create no overlays."
+  (with-temp-buffer
+    (insert "* Heading\nHidden content\n")
+    (goto-char (point-min))
+    (set-window-buffer (selected-window) (current-buffer))
+    (let ((state (flash-state-create (list (selected-window))))
+          (flash-backdrop nil)
+          (flash-highlight-matches t)
+          (flash-label-position 'overlay))
+      ;; Folded match with no label
+      (setf (flash-state-matches state)
+            (list (make-flash-match
+                   :pos (copy-marker 15)
+                   :end-pos (copy-marker 20)
+                   :label nil
+                   :window (selected-window)
+                   :fold 1)))
+      (flash-highlight-update state)
+      ;; No overlays — folded match without label is skipped entirely
+      (should (= 0 (length (flash-state-overlays state)))))))
+
 (provide 'flash-highlight-test)
 ;;; flash-highlight-test.el ends here

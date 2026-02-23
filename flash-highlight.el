@@ -194,7 +194,36 @@ LABEL, FACE, and POSITION control displayed label."
                             (make-overlay pos pos buf))))
                 (flash--configure-label-overlay
                  ov state buf pos end-pos label face flash-label-position)
-                (push ov new-overlays)))))
+                (push ov new-overlays))))
+          ;; Folded match: show label at end of fold heading line.
+          ;; Use `display' property on the last visible char — `after-string'
+          ;; gets swallowed by org-fold at the visible/invisible boundary.
+          (when (and fold show-label)
+            (let* ((prefix (flash-state-label-prefix state))
+                   (display-label (if (and prefix (string-prefix-p prefix label))
+                                      (substring label (length prefix))
+                                    label))
+                   (fold-last-vis
+                    (with-current-buffer buf
+                      (save-excursion
+                        (goto-char fold)
+                        (let ((eol (line-end-position)))
+                          (if (invisible-p eol) (max fold (1- eol)) eol)))))
+                   (orig-char (with-current-buffer buf
+                                (char-after fold-last-vis)))
+                   (ov (or (pop label-pool)
+                           (make-overlay fold-last-vis (1+ fold-last-vis) buf))))
+              (move-overlay ov fold-last-vis (1+ fold-last-vis) buf)
+              (flash--reset-overlay-decoration ov)
+              (overlay-put ov 'display
+                           (concat (string orig-char)
+                                   (propertize (concat " " display-label)
+                                               'face face)))
+              (overlay-put ov 'face nil)
+              (overlay-put ov 'flash t)
+              (overlay-put ov 'flash-kind 'label)
+              (overlay-put ov 'priority 200)
+              (push ov new-overlays))))
         (when label
           (setq index (1+ index)))))
     ;; Delete overlays no longer needed.

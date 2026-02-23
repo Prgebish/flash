@@ -39,6 +39,16 @@ MAX-MATCHES controls assignment limit:
          (available-chars (flash--available-labels state pattern))
          (limit (flash--resolve-label-limit available-chars max-matches))
          (sorted (flash--sort-by-distance state matches limit))
+         ;; Deduplicate: keep only closest match per fold
+         (sorted (let ((seen-folds (make-hash-table :test 'eql))
+                       deduped)
+                   (dolist (match sorted)
+                     (let ((fold (flash-match-fold match)))
+                       (if (and fold (gethash fold seen-folds))
+                           nil  ; skip — another match in same fold is closer
+                         (when fold (puthash fold t seen-folds))
+                         (push match deduped))))
+                   (nreverse deduped)))
          (labels (flash--generate-labels available-chars (length sorted)))
          (label-index (make-hash-table :test 'equal)))
     ;; Reset all labels first.
