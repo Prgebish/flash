@@ -173,6 +173,13 @@ Set to 0 to always show labels (default)."
   :type 'integer
   :group 'flash)
 
+(defcustom flash-search-folds nil
+  "When non-nil, search inside folded (invisible) regions.
+When nil (default), only visible text is searched.
+Flash-isearch always searches folds regardless of this setting."
+  :type 'boolean
+  :group 'flash)
+
 ;;; State for continue functionality
 
 (defvar flash--last-pattern nil

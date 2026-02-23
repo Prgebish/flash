@@ -137,6 +137,7 @@ This is useful for quickly selecting or operating on a surrounding code structur
 | ~flash-nohlsearch~         | ~nil~                          | Clear search highlighting after jump               |
 | ~flash-search-history~     | ~nil~                          | Add search pattern to isearch history              |
 | ~flash-min-pattern-length~ | ~0~                            | Minimum pattern length before labels appear        |
+| ~flash-search-folds~       | ~nil~                          | Search inside folded (invisible) regions           |
 
 **** Label Positions
 

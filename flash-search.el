@@ -12,6 +12,7 @@
 (require 'flash-state)
 
 (defvar flash-case-fold t)
+(defvar flash-search-folds nil)
 
 (defun flash-search (state)
   "Find all matches for STATE pattern in all windows.
@@ -35,16 +36,20 @@ Updates STATE matches field with found matches."
                     ;; Skip duplicate positions from other windows
                     (unless (gethash key seen)
                       (puthash key t seen)
-                      (let ((end-pos (match-end 0))
-                            (fold (flash--get-fold-at pos)))
-                        (push (make-flash-match
-                               :pos pos
-                               :end-pos end-pos
-                               :buffer buf
-                               :label nil
-                               :window win
-                               :fold fold)
-                              matches)))))))))))
+                      (let* ((end-pos (match-end 0))
+                             (hidden (invisible-p pos))
+                             (fold (when (and hidden flash-search-folds)
+                                     (flash--get-fold-at pos))))
+                        ;; Skip invisible matches unless fold search is enabled
+                        (unless (and hidden (not flash-search-folds))
+                          (push (make-flash-match
+                                 :pos pos
+                                 :end-pos end-pos
+                                 :buffer buf
+                                 :label nil
+                                 :window win
+                                 :fold fold)
+                                matches))))))))))))
     (setf (flash-state-matches state) (nreverse matches))
     ;; Labels are invalidated after each search and rebuilt separately.
     (setf (flash-state-label-index state) nil)))

@@ -150,7 +150,8 @@ Labels are shown by default only when `flash-isearch-enabled' is non-nil."
                                   (>= pattern-len min-len))))
         (if active-pattern
           (progn
-            (flash-search flash-isearch--state)
+            (let ((flash-search-folds t))
+              (flash-search flash-isearch--state))
             ;; Assign labels and keep only rendered candidates for speed.
             (let* ((limit (pcase flash-isearch-label-limit
                             ('single-char 'single-char)

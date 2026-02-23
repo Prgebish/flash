@@ -118,5 +118,48 @@ When two windows show the same buffer, each position should appear only once."
         (delete-window win2))
       (kill-buffer buf))))
 
+(ert-deftest flash-search-skips-invisible-test ()
+  "Test that invisible (folded) text is skipped by default."
+  (with-temp-buffer
+    (insert "visible foo\n")
+    (let ((hidden-start (point)))
+      (insert "hidden foo\n")
+      (let ((hidden-end (point)))
+        (insert "visible foo\n")
+        ;; Make middle line invisible
+        (let ((ov (make-overlay hidden-start hidden-end)))
+          (overlay-put ov 'invisible t))
+        (goto-char (point-min))
+        (set-window-buffer (selected-window) (current-buffer))
+        (let ((flash-search-folds nil)
+              (state (flash-state-create (list (selected-window)))))
+          (setf (flash-state-pattern state) "foo")
+          (flash-search state)
+          ;; Should find only 2 visible matches, not the hidden one
+          (should (= 2 (length (flash-state-matches state)))))))))
+
+(ert-deftest flash-search-includes-invisible-when-enabled-test ()
+  "Test that invisible text is searched when flash-search-folds is t."
+  (with-temp-buffer
+    (insert "visible foo\n")
+    (let ((hidden-start (point)))
+      (insert "hidden foo\n")
+      (let ((hidden-end (point)))
+        (insert "visible foo\n")
+        (let ((ov (make-overlay hidden-start hidden-end)))
+          (overlay-put ov 'invisible t))
+        (goto-char (point-min))
+        (set-window-buffer (selected-window) (current-buffer))
+        (let ((flash-search-folds t)
+              (state (flash-state-create (list (selected-window)))))
+          (setf (flash-state-pattern state) "foo")
+          (flash-search state)
+          ;; Should find all 3 matches including hidden
+          (should (= 3 (length (flash-state-matches state))))
+          ;; Hidden match should have fold set
+          (let ((hidden-match (cl-find-if #'flash-match-fold
+                                          (flash-state-matches state))))
+            (should hidden-match)))))))
+
 (provide 'flash-search-test)
 ;;; flash-search-test.el ends here
