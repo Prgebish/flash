@@ -32,8 +32,8 @@ Updates STATE matches field with found matches."
                     (buf (window-buffer win)))
                 (while (search-forward pattern limit t)
                   (let* ((pos (match-beginning 0))
-                         (key (cons buf pos)))
-                    ;; Skip duplicate positions from other windows
+                         (key (cons win pos)))
+                    ;; Skip duplicate positions within the same window
                     (unless (gethash key seen)
                       (puthash key t seen)
                       (let* ((end-pos (match-end 0))

@@ -97,9 +97,9 @@
     (insert "visible text")
     (should (null (flash--get-fold-at 5)))))
 
-(ert-deftest flash-search-dedup-same-buffer-test ()
-  "Test that duplicate positions from multiple windows are deduplicated.
-When two windows show the same buffer, each position should appear only once."
+(ert-deftest flash-search-same-buffer-two-windows-test ()
+  "Test that same buffer in two windows produces separate matches per window.
+Each window gets its own matches so the user can choose which window to jump to."
   (let ((buf (generate-new-buffer "*flash-search-dedup*"))
         win2)
     (unwind-protect
@@ -112,8 +112,17 @@ When two windows show the same buffer, each position should appear only once."
           (let ((state (flash-state-create (list (selected-window) win2))))
             (setf (flash-state-pattern state) "foo")
             (flash-search state)
-            ;; Should find 3 matches (not 6), deduplicating across windows
-            (should (= 3 (length (flash-state-matches state))))))
+            ;; Should find 6 matches: 3 per window
+            (should (= 6 (length (flash-state-matches state))))
+            ;; Each window should have 3 matches
+            (let ((win1-matches (cl-count (selected-window)
+                                          (flash-state-matches state)
+                                          :key #'flash-match-window))
+                  (win2-matches (cl-count win2
+                                          (flash-state-matches state)
+                                          :key #'flash-match-window)))
+              (should (= 3 win1-matches))
+              (should (= 3 win2-matches)))))
       (when (window-live-p win2)
         (delete-window win2))
       (kill-buffer buf))))

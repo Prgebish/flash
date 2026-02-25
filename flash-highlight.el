@@ -170,6 +170,7 @@ LABEL, FACE, and POSITION control displayed label."
              (label (flash-match-label match))
              (prefix (flash-state-label-prefix state))
              (fold (flash-match-fold match))
+             (win (flash-match-window match))
              (show-label (and label
                               (or (not prefix)
                                   (string-prefix-p prefix label))))
@@ -188,12 +189,14 @@ LABEL, FACE, and POSITION control displayed label."
               (let ((ov (or (pop match-pool)
                             (make-overlay pos end-pos buf))))
                 (flash--configure-match-overlay ov buf pos end-pos)
+                (overlay-put ov 'window win)
                 (push ov new-overlays)))
             (when show-label
               (let ((ov (or (pop label-pool)
                             (make-overlay pos pos buf))))
                 (flash--configure-label-overlay
                  ov state buf pos end-pos label face flash-label-position)
+                (overlay-put ov 'window win)
                 (push ov new-overlays))))
           ;; Folded match: show label at end of fold heading line.
           ;; Use `display' property on the last visible char — `after-string'
@@ -222,6 +225,7 @@ LABEL, FACE, and POSITION control displayed label."
               (overlay-put ov 'face nil)
               (overlay-put ov 'flash t)
               (overlay-put ov 'flash-kind 'label)
+              (overlay-put ov 'window win)
               (overlay-put ov 'priority 200)
               (push ov new-overlays))))
         (when label
@@ -268,6 +272,7 @@ Existing overlays are reused and moved to current `window-start' / `window-end'.
           (overlay-put ov 'flash t)
           (overlay-put ov 'flash-kind 'backdrop)
           (overlay-put ov 'flash-window win)
+          (overlay-put ov 'window win)
           (overlay-put ov 'priority 0)
           (push ov new-overlays)
           (remhash win existing))))
