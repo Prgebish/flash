@@ -180,7 +180,7 @@ Flash-isearch always searches folds regardless of this setting."
   :type 'boolean
   :group 'flash)
 
-(defcustom flash-keymap nil
+(defcustom flash-mode-map nil
   "Keymap for unhandled keys.")
 
 ;;; State for continue functionality
@@ -303,10 +303,10 @@ Returns t if jump was made, nil if cancelled."
           (setf (flash-state-pattern state)
                 (concat pattern char-str)))
 
-         ;; key bound in flash-keymap
-         ((and (keymapp flash-keymap)
-               (lookup-key flash-keymap (char-to-string char)))
-          (call-interactively (lookup-key flash-keymap (char-to-string char)))
+         ;; key bound in flash-mode-map
+         ((and (keymapp flash-mode-map)
+               (lookup-key flash-mode-map (char-to-string char)))
+          (call-interactively (lookup-key flash-mode-map (char-to-string char)))
           (throw 'flash-done nil))
 
          ;; Unhandled key - exit and push back for normal command loop
