@@ -11,8 +11,8 @@
 
 (require 'flash-state)
 
-(defvar flash-case-fold t)
-(defvar flash-search-folds nil)
+(defvar flash-case-fold)
+(defvar flash-search-folds)
 
 (defun flash-search (state)
   "Find all matches for STATE pattern in all windows.

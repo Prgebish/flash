@@ -17,12 +17,12 @@
 (declare-function flash-match-end-pos-value "flash-state" (match))
 (declare-function flash-match-buffer-live "flash-state" (match))
 
-;;; Configuration (set by flash.el)
+;;; Configuration (defined via defcustom in flash.el)
 
-(defvar flash-labels "asdfjkl;ghqwertyuiopzxcvbnm")
-(defvar flash-label-uppercase nil)
-(defvar flash-multi-char-labels nil)
-(defvar flash-case-fold t)
+(defvar flash-labels)
+(defvar flash-label-uppercase)
+(defvar flash-multi-char-labels)
+(defvar flash-case-fold)
 
 ;;; Label Functions
 

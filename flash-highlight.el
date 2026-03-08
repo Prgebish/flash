@@ -63,13 +63,13 @@ Inherits from `shadow' (like flash.nvim's FlashBackdrop → Comment)."
 Each entry is (COLOR . [shade-50 shade-100 ... shade-900 shade-950]).
 Indices: 0=50, 1=100, 2=200, ..., 9=900, 10=950.")
 
-;;; Configuration (set by flash.el)
+;;; Configuration (defined via defcustom in flash.el)
 
-(defvar flash-backdrop t)
-(defvar flash-rainbow nil)
-(defvar flash-rainbow-shade 2)
-(defvar flash-highlight-matches t)
-(defvar flash-label-position 'overlay)
+(defvar flash-backdrop)
+(defvar flash-rainbow)
+(defvar flash-rainbow-shade)
+(defvar flash-highlight-matches)
+(defvar flash-label-position)
 
 ;;; Highlight Functions
 
