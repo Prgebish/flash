@@ -319,7 +319,15 @@ Replaces standard f/t/F/T with flash versions."
     (define-key evil-motion-state-map "F" #'flash-char-find-backward)
     (define-key evil-motion-state-map "T" #'flash-char-find-to-backward)
     (define-key evil-motion-state-map ";" #'flash-char-repeat)
-    (define-key evil-motion-state-map "," #'flash-char-repeat-reverse)))
+    (define-key evil-motion-state-map "," #'flash-char-repeat-reverse)
+    ;; Declare motion types so evil visual mode handles selection correctly
+    ;; :keep-visual t ensures visual state is preserved during the motion
+    (evil-set-command-properties #'flash-char-find :type 'inclusive :repeat 'motion :keep-visual t)
+    (evil-set-command-properties #'flash-char-find-to :type 'inclusive :repeat 'motion :keep-visual t)
+    (evil-set-command-properties #'flash-char-find-backward :type 'exclusive :repeat 'motion :keep-visual t)
+    (evil-set-command-properties #'flash-char-find-to-backward :type 'exclusive :repeat 'motion :keep-visual t)
+    (evil-set-command-properties #'flash-char-repeat :type 'inclusive :repeat 'motion :keep-visual t)
+    (evil-set-command-properties #'flash-char-repeat-reverse :type 'inclusive :repeat 'motion :keep-visual t)))
 
 (provide 'flash-char)
 ;;; flash-char.el ends here
