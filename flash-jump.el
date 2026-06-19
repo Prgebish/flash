@@ -21,6 +21,7 @@
 (defvar flash-jump-position)
 (defvar flash-jumplist)
 (defvar flash-nohlsearch)
+(defvar flash-after-jump-hook)
 
 ;;; Forward declarations for evil
 (defvar evil-state)
@@ -76,6 +77,8 @@ Clears highlighting if `flash-nohlsearch' is non-nil."
       ;; Clear search highlighting if requested
       (when flash-nohlsearch
         (flash--clear-search-highlight))
+      ;; Notify observers now that point has landed in the target buffer.
+      (run-hooks 'flash-after-jump-hook)
       t)))
 
 (defun flash--clear-search-highlight ()
