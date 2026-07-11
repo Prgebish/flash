@@ -74,6 +74,11 @@
   (should (boundp 'flash-jumplist))
   (should (eq t flash-jumplist)))
 
+(ert-deftest flash-defcustom-after-jump-hook-test ()
+  "Test that after-jump-hook is customizable and defaults to nil."
+  (should (custom-variable-p 'flash-after-jump-hook))
+  (should (null flash-after-jump-hook)))
+
 (ert-deftest flash-defcustom-search-history-test ()
   "Test that search-history defcustom exists and defaults to nil."
   (should (boundp 'flash-search-history))

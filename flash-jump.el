@@ -66,6 +66,9 @@ Clears highlighting if `flash-nohlsearch' is non-nil."
                  (not (eq (window-buffer target-window) buf))
                  (not (window-dedicated-p target-window)))
         (set-window-buffer target-window buf))
+      ;; `set-window-buffer' does not update `current-buffer' when the
+      ;; target window is already selected.
+      (set-buffer (window-buffer target-window))
       ;; Jump to position based on setting.
       (when (and (integerp target-pos)
                  (<= (point-min) target-pos)

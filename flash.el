@@ -155,10 +155,12 @@ or `C-x C-SPC' (global mark), or with evil's `C-o'."
   :group 'flash)
 
 (defcustom flash-after-jump-hook nil
-  "Hook run after a successful jump.
+  "Hook run after `flash-jump-to-match' completes successfully.
 Functions are called with no arguments in the target buffer, after point
-has moved to the match (and any window/buffer switch and unfold).
-Not run when a session is cancelled or returns to the start position."
+has moved to the match (and any window/buffer switch and unfold).  This
+covers standalone, autojump, RET, and isearch label jumps.  Character
+motions and Treesitter selections do not run this hook.  The hook is not
+run when a session is cancelled or returns to the start position."
   :type 'hook
   :group 'flash)
 

@@ -138,7 +138,7 @@ This is useful for quickly selecting or operating on a surrounding code structur
 | ~flash-search-history~     | ~nil~                          | Add search pattern to isearch history              |
 | ~flash-min-pattern-length~ | ~0~                            | Minimum pattern length before labels appear        |
 | ~flash-search-folds~       | ~nil~                          | Search inside folded (invisible) regions           |
-| ~flash-after-jump-hook~    | ~nil~                          | Hook run in the target buffer after a successful jump |
+| ~flash-after-jump-hook~    | ~nil~                          | Hook after standalone, autojump, RET, and isearch label jumps |
 
 **** Label Positions
 

@@ -117,6 +117,52 @@
   "Test jump to nil match returns nil."
   (should-not (flash-jump-to-match nil)))
 
+(ert-deftest flash-after-jump-hook-runs-in-target-buffer-test ()
+  "Test after-jump hook runs once at point in the target buffer."
+  (let ((source (generate-new-buffer " *flash-jump-source*"))
+        (target (generate-new-buffer " *flash-jump-target*"))
+        (calls 0)
+        observed)
+    (unwind-protect
+        (save-window-excursion
+          (set-window-buffer (selected-window) source)
+          (with-current-buffer target
+            (insert "foo bar baz"))
+          (let ((flash-after-jump-hook
+                 (list (lambda ()
+                         (setq calls (1+ calls))
+                         (setq observed
+                               (list (current-buffer) (point))))))
+                (match (with-current-buffer target
+                         (make-flash-match
+                          :pos (copy-marker 5)
+                          :end-pos (copy-marker 8)
+                          :label "a"
+                          :window (selected-window)
+                          :fold nil))))
+            (should (flash-jump-to-match match))
+            (should (= calls 1))
+            (should (equal observed (list target 5)))))
+      (kill-buffer source)
+      (kill-buffer target))))
+
+(ert-deftest flash-after-jump-hook-not-run-without-jump-test ()
+  "Test after-jump hook does not run for cancellation paths."
+  (with-temp-buffer
+    (insert "foo bar")
+    (set-window-buffer (selected-window) (current-buffer))
+    (let ((calls 0)
+          (flash-after-jump-hook
+           (list (lambda () (setq calls (1+ calls)))))
+          (state (flash-state-create (list (selected-window)))))
+      (setf (flash-state-start-window state) (selected-window))
+      (setf (flash-state-start-point state) 1)
+      (goto-char (point-max))
+      (flash-return-to-start state)
+      (should-not (flash-jump-to-match nil))
+      (should (= 1 (point)))
+      (should (zerop calls)))))
+
 (ert-deftest flash-jump-find-match-by-label-test ()
   "Test finding match by label in jump module."
   (with-temp-buffer
