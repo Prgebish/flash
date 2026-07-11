@@ -21,6 +21,7 @@ Unlike [[https://github.com/abo-abo/avy][avy]], =flash= uses *incremental search
 - *Standalone Jump Mode* (core feature): type a character, then press a label to jump where you need.
 - *Multi-window* jumping across all visible windows.
 - *Evil integration*: works as a proper evil motion (composable with operators like =d=, =y=, =c=).
+- *Remote Evil actions*: select a distant target, yank or delete there, then return to where you started.
 
 ** Requirements
 
@@ -39,7 +40,7 @@ Unlike [[https://github.com/abo-abo/avy][avy]], =flash= uses *incremental search
 ;; (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 
 (use-package flash
-  :commands (flash-jump flash-jump-continue
+  :commands (flash-jump flash-jump-continue flash-action flash-action-undo
              flash-treesitter)
   :bind ("s-j" . flash-jump)
   :custom
@@ -114,6 +115,32 @@ M-x flash-treesitter
 Shows labels for all parent nodes of the Treesitter syntax tree at point, from the innermost to the outermost. Each label corresponds to a progressively larger region of code (e.g., identifier, expression, statement, function body, function definition). Press a label to select that entire node. With evil-mode, the selection enters visual state automatically.
 
 This is useful for quickly selecting or operating on a surrounding code structure --- for example, selecting an entire function, an if-block, or an argument list.
+
+*** Remote Yank/Delete
+
+Requires evil-mode. =flash-evil-setup= binds =gS= in normal state only:
+
+1. Press =gS= and type a search pattern.
+2. Press the label at the remote location.
+3. Enter a normal Evil yank/delete command.
+
+For example, =gS → price → a → yiw= copies the word at label =a=, while
+=gS → debug → s → dd= deletes the line at label =s=. After the operation,
+Flash restores the original window, point, mark, and Evil state.
+
+The action starts at the first character of the selected match. The rest of
+the range comes from native Evil grammar, so commands such as =yy=, =dd=,
+=yiw=, =di(=, =y$=, =d2w=, =2dw=, and register prefixes such as ="ayy= work
+normally. Direct =Y=, =D=, =x=, and =X= are supported too.
+
+Only yank and delete operations are accepted. There is no =ym=/=dm= search
+match object, no editing/paste actions, and no Embark integration. =gS= is not
+bound in visual or operator-pending state; the existing =gs= remains the Flash
+motion for compositions such as =d gs=, =y gs=, and =c gs=.
+
+Undo history belongs to the changed buffer. Use =M-x flash-action-undo= to undo
+the last remote deletion without visiting its buffer. The command refuses if
+that buffer has been edited since the remote action.
 
 ** Configuration
 
@@ -202,7 +229,9 @@ This is useful for quickly selecting or operating on a surrounding code structur
 (flash-evil-setup t)  ; t = also set up f/t/F/T char motions
 #+end_src
 
-This binds =gs= to ~flash-evil-jump~ in normal, visual, motion, and operator states. With the optional argument, it also replaces =f=, =t=, =F=, =T= with flash-enhanced versions.
+This binds =gs= to ~flash-evil-jump~ in normal, visual, motion, and operator
+states, and =gS= to ~flash-action~ in normal state only. With the optional
+argument, it also replaces =f=, =t=, =F=, =T= with flash-enhanced versions.
 
 *** Manual Setup
 
@@ -212,6 +241,7 @@ If you prefer different keybindings:
 (require 'flash-evil)
 (evil-global-set-key 'normal (kbd "s") #'flash-evil-jump)
 (evil-global-set-key 'visual (kbd "s") #'flash-evil-jump)
+(evil-global-set-key 'normal (kbd "g S") #'flash-action)
 ;; Char motions
 (flash-char-setup-evil-keys)
 #+end_src

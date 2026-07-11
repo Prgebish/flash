@@ -18,6 +18,7 @@
 ;;; Code:
 
 (require 'flash)
+(require 'flash-action)
 (require 'flash-char)
 
 ;;; Forward declarations for optional evil dependency
@@ -55,6 +56,7 @@ In visual mode: extends selection to target."
 (defun flash-evil-setup (&optional char-motions)
   "Set up evil keybindings for flash.
 Binds `gs' in normal, visual, motion, and operator states.
+Bind `gS' to `flash-action' in normal state only.
 When CHAR-MOTIONS is non-nil, also replace f/t/F/T with flash versions."
   (interactive "P")
   (unless (require 'evil nil t)
@@ -65,10 +67,12 @@ When CHAR-MOTIONS is non-nil, also replace f/t/F/T with flash versions."
   (evil-global-set-key 'visual (kbd "g s") #'flash-evil-jump)
   (evil-global-set-key 'motion (kbd "g s") #'flash-evil-jump)
   (evil-global-set-key 'operator (kbd "g s") #'flash-evil-jump)
+  ;; Remote yank/delete is deliberately unavailable while an operator is pending.
+  (evil-global-set-key 'normal (kbd "g S") #'flash-action)
   ;; Char motions
   (when char-motions
     (flash-char-setup-evil-keys))
-  (message "Flash-evil: bound 'gs' to flash jump%s"
+  (message "Flash-evil: bound 'gs' to jump, 'gS' to remote action%s"
            (if char-motions ", f/t/F/T to flash char" "")))
 
 (provide 'flash-evil)

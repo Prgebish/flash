@@ -217,27 +217,35 @@ Handles both `evil-search' and `isearch' modules."
 
 ;;; Main Command
 
-;;;###autoload
-(defun flash-jump ()
-  "Start flash jump session.
-Type characters to search, then press a label to jump.
-Press RET to jump to first match, ESC to cancel."
-  (interactive)
+(defun flash--create-state (&optional pattern)
+  "Create a Flash state, optionally initialized with PATTERN."
   (let* ((windows (if flash-multi-window
                       (window-list nil 'no-minibuf)
                     (list (selected-window))))
          (state (flash-state-create windows)))
     (setf (flash-state-start-window state) (selected-window))
     (setf (flash-state-start-point state) (point))
+    (when pattern
+      (setf (flash-state-pattern state) pattern))
+    state))
+
+;;;###autoload
+(defun flash-jump ()
+  "Start flash jump session.
+Type characters to search, then press a label to jump.
+Press RET to jump to first match, ESC to cancel."
+  (interactive)
+  (let ((state (flash--create-state)))
     (unwind-protect
-        (flash--loop state)
+        (when-let ((match (flash--loop state)))
+          (flash-jump-to-match match))
       (flash-state-cleanup state))))
 
 ;;; Main Loop
 
 (defun flash--loop (state)
   "Main input loop for STATE.
-Returns t if jump was made, nil if cancelled."
+Return the selected `flash-match', or nil when cancelled."
   (catch 'flash-done
     (while t
       ;; Update search results
@@ -259,8 +267,8 @@ Returns t if jump was made, nil if cancelled."
                  (= (length (flash-state-matches state)) 1)
                  (>= (length (flash-state-pattern state))
                      flash-min-pattern-length))
-        (flash--do-jump state)
-        (throw 'flash-done t))
+        (flash--save-pattern state)
+        (throw 'flash-done (car (flash-state-matches state))))
 
       ;; Read input
       (redisplay t)  ; Force display update before reading
@@ -270,7 +278,12 @@ Returns t if jump was made, nil if cancelled."
              (prompt (flash--format-prompt pattern match-count prefix))
              (char (read-char prompt))
              (char-str (and (<= 32 char) (<= char 126)
-                            (char-to-string char))))
+                            (char-to-string char)))
+             (full-label (and char-str
+                              (concat (or prefix "") char-str)))
+             (selected-match
+              (and full-label
+                   (flash-find-match-by-label state full-label))))
         (cond
          ;; Escape - cancel
          ((= char ?\e)
@@ -279,9 +292,10 @@ Returns t if jump was made, nil if cancelled."
 
          ;; Enter - jump to first match
          ((= char ?\r)
-          (when (flash-state-matches state)
-            (flash--do-jump state))
-          (throw 'flash-done t))
+          (let ((match (car (flash-state-matches state))))
+            (when match
+              (flash--save-pattern state))
+            (throw 'flash-done match)))
 
          ;; Backspace - delete last char or clear prefix
          ((or (= char ?\C-?) (= char ?\C-h) (= char 127))
@@ -295,11 +309,9 @@ Returns t if jump was made, nil if cancelled."
                   (substring pattern 0 -1)))))
 
          ;; Check if it completes a label (with current prefix)
-         ((and char-str
-               (let ((full-label (concat (or prefix "") char-str)))
-                 (flash-jump-to-label state full-label)))
+         (selected-match
           (flash--save-pattern state)
-          (throw 'flash-done t))
+          (throw 'flash-done selected-match))
 
          ;; Check if it's a valid label prefix (for multi-char labels)
          ((and char-str (flash--valid-label-prefix-p state char-str))
@@ -317,12 +329,6 @@ Returns t if jump was made, nil if cancelled."
 
          ;; Invalid input with prefix - ignore or beep
          (t (beep)))))))
-
-(defun flash--do-jump (state)
-  "Perform jump to first match in STATE.
-Also saves pattern and adds to search history."
-  (flash-jump-to-first state)
-  (flash--save-pattern state))
 
 (defun flash--save-pattern (state)
   "Save pattern from STATE for continue and search history."
@@ -361,17 +367,10 @@ Also saves pattern and adds to search history."
   "Continue flash jump with the last search pattern.
 If no previous pattern exists, starts a new search."
   (interactive)
-  (let* ((windows (if flash-multi-window
-                      (window-list nil 'no-minibuf)
-                    (list (selected-window))))
-         (state (flash-state-create windows)))
-    (setf (flash-state-start-window state) (selected-window))
-    (setf (flash-state-start-point state) (point))
-    ;; Set initial pattern from last search
-    (when flash--last-pattern
-      (setf (flash-state-pattern state) flash--last-pattern))
+  (let ((state (flash--create-state flash--last-pattern)))
     (unwind-protect
-        (flash--loop state)
+        (when-let ((match (flash--loop state)))
+          (flash-jump-to-match match))
       (flash-state-cleanup state))))
 
 ;;; Optional modules

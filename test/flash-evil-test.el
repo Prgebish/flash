@@ -9,6 +9,10 @@
 (require 'ert)
 
 (declare-function evil-get-command-property "evil")
+(declare-function flash-evil-setup "flash-evil" (&optional char-motions))
+
+(defvar evil-normal-state-map)
+(defvar evil-operator-state-map)
 
 ;; Only run tests if evil is available
 (when (require 'evil nil t)
@@ -33,6 +37,14 @@
     "Test that flash-evil-setup is defined."
     (should (fboundp 'flash-evil-setup))
     (should (commandp 'flash-evil-setup)))
+
+  (ert-deftest flash-evil-setup-binds-action-only-in-normal-state-test ()
+    "Test that gS is a normal-state action, not an operator motion."
+    (flash-evil-setup)
+    (should (eq (lookup-key evil-normal-state-map (kbd "g S"))
+                #'flash-action))
+    (should-not (eq (lookup-key evil-operator-state-map (kbd "g S"))
+                    #'flash-action)))
 
 )
 

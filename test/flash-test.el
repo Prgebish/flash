@@ -103,6 +103,49 @@
   (should (fboundp 'flash-jump-continue))
   (should (commandp 'flash-jump-continue)))
 
+(ert-deftest flash-loop-returns-selected-match-without-jumping-test ()
+  "Selector returns a labelled match without applying jump side effects."
+  (with-temp-buffer
+    (insert "alpha beta")
+    (goto-char (point-min))
+    (set-window-buffer (selected-window) (current-buffer))
+    (let* ((state (flash-state-create (list (selected-window))))
+           (match (make-flash-match
+                   :pos 7 :end-pos 11 :buffer (current-buffer)
+                   :window (selected-window) :label "a"))
+           (hook-calls 0)
+           (flash-after-jump-hook
+            (list (lambda () (setq hook-calls (1+ hook-calls))))))
+      (setf (flash-state-matches state) (list match))
+      (cl-letf (((symbol-function 'flash-search) #'ignore)
+                ((symbol-function 'flash-label-matches) #'ignore)
+                ((symbol-function 'flash-highlight-update) #'ignore)
+                ((symbol-function 'redisplay) #'ignore)
+                ((symbol-function 'read-char) (lambda (&rest _) ?a)))
+        (should (eq match (flash--loop state))))
+      (should (= (point) (point-min)))
+      (should (zerop hook-calls)))))
+
+(ert-deftest flash-loop-autojump-returns-match-test ()
+  "Autojump selects the sole match without moving point itself."
+  (with-temp-buffer
+    (insert "alpha beta")
+    (goto-char (point-min))
+    (set-window-buffer (selected-window) (current-buffer))
+    (let* ((state (flash-state-create (list (selected-window))))
+           (match (make-flash-match
+                   :pos 7 :end-pos 11 :buffer (current-buffer)
+                   :window (selected-window)))
+           (flash-autojump t))
+      (setf (flash-state-pattern state) "beta"
+            (flash-state-matches state) (list match))
+      (cl-letf (((symbol-function 'flash-search) #'ignore)
+                ((symbol-function 'flash-label-matches) #'ignore)
+                ((symbol-function 'flash-highlight-update) #'ignore)
+                ((symbol-function 'redisplay) #'ignore))
+        (should (eq match (flash--loop state))))
+      (should (= (point) (point-min))))))
+
 (ert-deftest flash-multi-window-search-test ()
   "Test search works across multiple windows with different buffers."
   (let ((buf1 (generate-new-buffer "*flash-test-1*"))
