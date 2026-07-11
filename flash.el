@@ -154,6 +154,14 @@ or `C-x C-SPC' (global mark), or with evil's `C-o'."
   :type 'boolean
   :group 'flash)
 
+(defcustom flash-after-jump-hook nil
+  "Hook run after a successful jump.
+Functions are called with no arguments in the target buffer, after point
+has moved to the match (and any window/buffer switch and unfold).
+Not run when a session is cancelled or returns to the start position."
+  :type 'hook
+  :group 'flash)
+
 (defcustom flash-search-history nil
   "When non-nil, add search pattern to Emacs search history.
 The pattern will appear in `isearch' history."
